@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>CE + PFA Capacity Arbitrage v12</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; padding: 20px; font-size: 13px; }
+  h1 { font-size: 17px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; }
+  .subtitle { color: #94a3b8; font-size: 12px; margin-bottom: 16px; }
+
+  .month-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+  .month-btn { padding: 5px 11px; border-radius: 6px; border: 1px solid #2d3548; background: #1e2330; color: #94a3b8; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+  .month-btn.active { background: #312e81; border-color: #6366f1; color: #e0e7ff; font-weight: 600; }
+  
+  .action-btn { background: #3b82f6; border-color: #2563eb; color: #ffffff; font-weight: 600; cursor: pointer; padding: 8px 12px; border-radius: 6px; border-style: solid; border-width: 1px; }
+  .action-btn:hover { background: #2563eb; border-color: #1d4ed8; }
+  .danger-btn { background: transparent; border: 1px solid #ef4444; color: #ef4444; font-weight: 600; cursor: pointer; padding: 8px 12px; border-radius: 6px; }
+  .danger-btn:hover { background: #ef4444; color: #ffffff; }
+
+  .mode-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .mode-bar { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid #2d3548; }
+  .mode-btn { padding: 7px 16px; background: #1e2330; color: #94a3b8; font-size: 12px; cursor: pointer; border: none; transition: all 0.15s; }
+  .mode-btn.active-current { background: #1e3a5f; color: #93c5fd; font-weight: 700; }
+  .mode-btn.active-future  { background: #14532d; color: #86efac; font-weight: 700; }
+
+  .grid { display: grid; grid-template-columns: 340px 1fr; gap: 16px; }
+  .panel { background: #1e2330; border-radius: 10px; padding: 16px; border: 1px solid #2d3548; }
+  .panel h2 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 12px; }
+
+  .section-label { font-size: 11px; font-weight: 600; color: #7c8db0; text-transform: uppercase; letter-spacing: 0.06em; margin: 14px 0 8px; border-top: 1px solid #2d3548; padding-top: 10px; }
+  .section-label:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+  
+  .input-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
+  .input-row label { color: #cbd5e1; font-size: 12px; flex: 1; line-height: 1.35; }
+  .input-row input[type=range]  { width: 84px; accent-color: #6366f1; }
+  .input-row input[type=number] { width: 60px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 5px; color: #f1f5f9; padding: 4px; text-align: right; }
+  .val-badge { min-width: 40px; text-align: right; font-size: 12px; color: #a5b4fc; font-weight: 600; }
+  .ro-val    { min-width: 60px; text-align: right; font-size: 12px; font-weight: 600; color: #f1f5f9; background: #0f1117; border: 1px solid #2d3548; border-radius: 5px; padding: 4px 7px; }
+  
+  .quota-row { display: flex; gap: 4px; align-items: center; justify-content: flex-end; }
+  .quota-row input { width: 38px; }
+
+  .results-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .stat-card { background: #252c3f; border-radius: 8px; padding: 12px; border: 1px solid #2d3548; display: flex; flex-direction: column; justify-content: space-between; }
+  .stat-card.hl  { border-color: #6366f1; background: #1e1f3a; }
+  .stat-label { font-size: 10px; text-transform: uppercase; color: #64748b; margin-bottom: 4px; letter-spacing: 0.05em; }
+  .stat-value { font-size: 20px; font-weight: 700; color: #f1f5f9; }
+  .stat-sub { font-size: 11px; color: #64748b; margin-top: 4px; line-height: 1.3; }
+
+  .util-bar-bg { background: #0f1117; height: 6px; border-radius: 3px; margin: 8px 0; overflow: hidden; border: 1px solid #1a2030; }
+  .util-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .util-green { background: #22c55e; box-shadow: 0 0 5px rgba(34, 197, 94, 0.4); }
+  .util-yel { background: #f59e0b; }
+  .util-red { background: #ef4444; box-shadow: 0 0 5px rgba(239, 68, 68, 0.4); }
+
+  .target-banner { display:flex; align-items:center; justify-content:space-between; background:#1a1f30; border:1px solid #2d3548; border-radius:8px; padding:12px; margin-bottom:14px; }
+  .tb-item { flex: 1; text-align: center; }
+  .tb-label { font-size: 10px; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+  .tb-val { font-size: 20px; font-weight: 700; }
+  .tb-sep { width:1px; height:36px; background:#2d3548; }
+
+  /* WEEKLY TABLE CSS */
+  .capacity-table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom: 14px; }
+  .capacity-table th { text-align:left; color:#64748b; font-size:10px; text-transform:uppercase; letter-spacing:.06em; padding:6px 8px; border-bottom:1px solid #2d3548; }
+  .capacity-table td { padding:8px; border-bottom:1px solid #1a2030; color:#cbd5e1; }
+  .capacity-table tr:last-child td { border-bottom:none; }
+  .capacity-table .em { color:#f1f5f9; font-weight:600; text-align: right; }
+  .capacity-table .g  { color:#22c55e; }
+  
+  .wk-input { width: 56px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 4px; color: #a5b4fc; font-weight: 600; padding: 4px; text-align: right; font-size: 12px; transition: border-color 0.2s; }
+  .wk-input:focus { border-color: #6366f1; outline: none; }
+
+  .weekly-status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .ws-green { background-color: #22c55e; box-shadow: 0 0 4px rgba(34,197,94,0.6); }
+  .ws-red { background-color: #ef4444; box-shadow: 0 0 4px rgba(239,68,68,0.6); }
+
+  .funnel-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .funnel-row { display: flex; align-items: center; margin-bottom: 5px; gap: 8px; }
+  .funnel-lbl { width: 130px; font-size: 11px; color: #94a3b8; }
+  .funnel-bar-wrap { flex:1; background:#0f1117; height:18px; border-radius:3px; overflow:hidden; position:relative; }
+  .funnel-bar { height:100%; display:flex; align-items:center; padding-left:8px; transition: width 0.3s; }
+  .funnel-bar span { font-size:10px; font-weight:600; color:#fff; }
+  .bar-std { background: #6366f1; }
+  .bar-cap { background: #06b6d4; }
+  .bar-pfa { background: #10b981; }
+
+  .narrative-box { background: #1e2330; border-left: 4px solid #6366f1; padding: 14px; border-radius: 6px; margin-top: 14px; border: 1px solid #3d4a63; border-left-width: 4px; }
+  .narrative-box h3 { font-size: 11px; text-transform: uppercase; color: #a5b4fc; margin-bottom: 6px; }
+  .narrative-box p { font-size: 12px; line-height: 1.5; color: #cbd5e1; }
+
+  .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 17, 23, 0.85); z-index: 1000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: #1e2330; border: 1px solid #3d4a63; border-radius: 10px; width: 680px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #2d3548; padding-bottom: 12px; }
+  .modal-header h2 { font-size: 14px; font-weight: 700; color: #f8fafc; margin: 0; }
+  .modal-close { background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; }
+  .modal-close:hover { color: #ef4444; }
+  .modal-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  .modal-table th { text-align: left; color: #64748b; font-size: 10px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid #2d3548; }
+  .modal-table td { padding: 6px 8px; border-bottom: 1px solid #1a2030; }
+  .modal-table input { width: 60px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 4px; color: #f1f5f9; padding: 4px; font-size: 12px; text-align: right; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
+
+  .chart-container { height: 220px; margin-top: 10px; margin-bottom: 16px; width: 100%; position: relative; }
+</style>
+</head>
+<body>
+
+<h1>CE + PFA Capacity Arbitrage v12</h1>
+<p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment</p>
+
+<div class="mode-wrap">
+  <span class="mode-label">Pathway Mode:</span>
+  <div class="mode-bar">
+    <button class="mode-btn active-current" id="btn-current" onclick="setMode('current')" title="Current: CEs conduct Phone Screens for all apps.">📞 Current State</button>
+    <button class="mode-btn" id="btn-future" onclick="setMode('future')" title="Future: Diverted apps bypass CE Phone Screens and go straight to CEs for Eval.">🚀 Future State (Bypass)</button>
+  </div>
+</div>
+
+<div class="month-bar">
+  <span class="month-bar-label">Month:</span>
+  <button class="month-btn active" onclick="setMonth(0)">May</button>
+  <button class="month-btn" onclick="setMonth(1)">Jun</button>
+  <button class="month-btn" onclick="setMonth(2)">Jul</button>
+  <button class="month-btn" onclick="setMonth(3)">Aug</button>
+  <button class="month-btn" onclick="setMonth(4)">Sep</button>
+  <button class="month-btn" onclick="setMonth(5)">Oct</button>
+  <button class="month-btn" onclick="setMonth(6)">Nov</button>
+  <button class="month-btn" onclick="setMonth(7)">Dec</button>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2>Inputs</h2>
+    
+    <div class="section-label">Volume & Forecasting</div>
+    <div class="input-row"><label>Accepted Apps (base)</label><input type="number" id="apps-base-input" onchange="syncToArrays()"></div>
+    <div class="input-row"><label>App Volume Bump (%)</label><input type="range" id="appGrowth" min="0" max="50" value="10"><span class="val-badge" id="appGrowth-v">10%</span></div>
+    <div class="input-row"><label>Enrollment Target</label><input type="number" id="enroll-target" onchange="syncToArrays()"></div>
+    
+    <div class="input-row" style="margin-top: 12px;"><label>Apps → PS Sched Rate %</label><input type="range" id="psSchedRate" min="50" max="100" value="95"><span class="val-badge" id="psSchedRate-v">95%</span></div>
+    <div class="input-row"><label>System Gross PS Demand</label><span class="ro-val" id="gross-ps-ro" style="color:#06b6d4;">—</span></div>
+
+    <div class="section-label">Staffing Engine (Team Comp)</div>
+    <div class="input-row"><label>Standard CEs Headcount</label><input type="number" id="stdCEs" value="13"></div>
+    <div class="input-row"><label>Lead CEs Headcount</label><input type="number" id="leadCEs" value="4"></div>
+    <div class="input-row"><label>PFA Headcount</label><input type="number" id="pfaHeadcount" value="5"></div>
+    
+    <div class="section-label">Clinical Scheduling Quotas</div>
+    <div class="input-row"><label>Std CE Daily (PS/Ev)</label><div class="quota-row"><input type="number" id="stdCePsQuota" value="4"><input type="number" id="stdCeEvalQuota" value="3"></div></div>
+    <div class="input-row"><label>Lead CE Daily (PS/Ev)</label><div class="quota-row"><input type="number" id="leadCePsQuota" value="3"><input type="number" id="leadCeEvalQuota" value="3"></div></div>
+    <div class="input-row"><label>PFA Daily PS Quota <span title="Apps screened per PFA per day" style="cursor:help;">ⓘ</span></label><div class="quota-row"><input type="number" id="pfaDailyQuota" value="10"></div></div>
+
+    <div class="section-label">Efficiency & Handle Time</div>
+    <div class="input-row"><label>PS Handle Time (mins)</label><input type="range" id="psAht" min="15" max="60" value="30" step="5"><span class="val-badge" id="psAht-v">30m</span></div>
+    <div class="input-row"><label>Eval Handle Time (mins)</label><input type="range" id="evalAht" min="30" max="120" value="60" step="5"><span class="val-badge" id="evalAht-v">60m</span></div>
+
+    <div class="section-label">Calendar & Exceptions</div>
+    <div class="input-row"><label>Working Days</label><input type="number" id="workingDays" onchange="syncToArrays()"></div>
+    <div class="input-row"><label>Known PTO Days (CEs)</label><input type="number" id="ptoDays" onchange="syncToArrays()"></div>
+    <div class="input-row"><label>Known PTO Days (PFAs)</label><input type="number" id="pfaPtoDays" onchange="syncToArrays()"></div>
+    
+    <button class="action-btn" style="width: 100%; justify-content: center; margin: 10px 0; font-size: 11px;" onclick="openSettingsModal()">📅 Manage Annual Forecasts & Calendar</button>
+
+    <div class="input-row"><label>CE Shrinkage (%)</label><input type="range" id="shrinkage" min="0" max="25" value="2"><span class="val-badge" id="shrinkage-v">2%</span></div>
+    <div class="input-row"><label>PFA Shrinkage (%)</label><input type="range" id="pfaShrinkage" min="0" max="25" value="5"><span class="val-badge" id="pfaShrinkage-v">5%</span></div>
+
+    <div class="section-label" style="color:#22c55e;">PFA Capacity Arbitrage</div>
+    <div class="input-row"><label>PSs Diverted to PFA % <span title="Percentage of Apps routed to the PFA workflow." style="cursor:help;">ⓘ</span></label><input type="range" id="pfaPct" min="0" max="100" value="37"><span class="val-badge" id="pfaPct-v">37%</span></div>
+
+    <div class="section-label">Funnel Rates</div>
+    <div class="input-row"><label>PS Completion %</label><input type="range" id="psComp" value="74"><span class="val-badge" id="psComp-v">74%</span></div>
+    <div class="input-row"><label>Screen-In %</label><input type="range" id="siRate" value="86"><span class="val-badge" id="siRate-v">86%</span></div>
+    <div class="input-row"><label>Eval Sched %</label><input type="range" id="schedRate" value="78"><span class="val-badge" id="schedRate-v">78%</span></div>
+    <div class="input-row"><label>Eval Comp %</label><input type="range" id="evalComp" value="78"><span class="val-badge" id="evalComp-v">78%</span></div>
+    <div class="input-row"><label>Enroll %</label><input type="range" id="enrollRate" value="80"><span class="val-badge" id="enrollRate-v">80%</span></div>
+  </div>
+
+  <div class="right-col">
+    <div class="panel">
+      <h2>Executive Staffing & Utilization</h2>
+      <div class="results-grid" id="metrics-output"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Enrollment Target Assurance</h2>
+      <div class="target-banner" id="target-banner"></div>
+      
+      <h2>Headcount Forecast (May - Dec) <span title="Calculates Required Headcount based on individual month forecasts." style="cursor:help; font-size:11px; color:#a5b4fc;">ⓘ</span></h2>
+      <div class="chart-container"><canvas id="headcountChart"></canvas></div>
+
+      <h2>Weekly Run Rate vs. Manual Targets <span style="font-size:10px;color:#64748b;font-weight:400;">· Enter custom targets to track pacing</span></h2>
+      <table class="capacity-table">
+        <thead>
+          <tr><th>Metric</th><th style="text-align:right; width:80px;">Target (Wk)</th><th>System Demand</th><th style="text-align:right;">Max Capacity</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>PS Scheduled</strong></td>
+            <td style="text-align:right;"><input type="number" class="wk-input" id="wt-psSched" placeholder="0"></td>
+            <td id="wd-psSched"></td>
+            <td class="em g" id="wc-psSched"></td>
+          </tr>
+          <tr>
+            <td><strong>PS Completed</strong></td>
+            <td style="text-align:right;"><input type="number" class="wk-input" id="wt-psComp" placeholder="0"></td>
+            <td id="wd-psComp"></td>
+            <td class="em g" id="wc-psComp"></td>
+          </tr>
+          <tr>
+            <td><strong>Evals Scheduled</strong></td>
+            <td style="text-align:right;"><input type="number" class="wk-input" id="wt-evSched" placeholder="0"></td>
+            <td id="wd-evSched"></td>
+            <td class="em g" id="wc-evSched"></td>
+          </tr>
+          <tr>
+            <td><strong>Evals Completed</strong></td>
+            <td style="text-align:right;"><input type="number" class="wk-input" id="wt-evComp" placeholder="0"></td>
+            <td id="wd-evComp"></td>
+            <td class="em g" id="wc-evComp"></td>
+          </tr>
+          <tr>
+            <td><strong>Enrolled</strong></td>
+            <td style="text-align:right;"><input type="number" class="wk-input" id="wt-enr" placeholder="0"></td>
+            <td id="wd-enr"></td>
+            <td class="em g" id="wc-enr"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Funnel Breakdown</h2>
+      <div class="funnel-grid">
+        <div><div class="funnel-title">System Demand</div><div id="demand-bars"></div></div>
+        <div><div class="funnel-title">System Capacity</div><div id="capacity-bars"></div></div>
+      </div>
+      <div class="narrative-box" id="narrative-output"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="ptoModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>📅 Annual Master Forecast & Calendar</h2>
+      <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+    </div>
+    <table class="modal-table">
+      <thead><tr><th>Month</th><th>Base Apps</th><th>Target Enroll</th><th>Work Days</th><th>CE PTO</th><th>PFA PTO</th></tr></thead>
+      <tbody id="modal-table-body"></tbody>
+    </table>
+    <div class="modal-footer">
+      <button class="danger-btn" onclick="restoreDefaults()">Restore Defaults</button>
+      <button class="action-btn" onclick="saveSettingsModal()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DEFAULTS & STORAGE ──
+const MONTHS = ['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DEFAULT_APPS = [1367, 1036, 1039, 1108, 1340, 1425, 1367, 1322];
+const DEFAULT_TGTS = [528, 348, 349, 370, 403, 466, 528, 529];
+const DEFAULT_WD = [18, 21, 21, 21, 21, 21, 18, 22];
+const DEFAULT_CE_PTO = [20, 0, 0, 0, 0, 0, 0, 0];
+const DEFAULT_PFA_PTO = [0, 0, 0, 0, 0, 0, 0, 0];
+const DEFAULT_WK_TGTS = Array.from({length: 8}, () => ({psSched: '', psComp: '', evSched: '', evComp: '', enr: ''}));
+
+const WEEKS_PER_MONTH = 4.33; 
+
+let PROJ_APPS_BASE = JSON.parse(localStorage.getItem('ce_apps_base')) || [...DEFAULT_APPS];
+let ENROLL_TGTS = JSON.parse(localStorage.getItem('ce_enroll_tgts')) || [...DEFAULT_TGTS];
+let WORKING_DAYS = JSON.parse(localStorage.getItem('ce_working_days')) || [...DEFAULT_WD];
+let PTO_DAYS = JSON.parse(localStorage.getItem('ce_pto_days')) || [...DEFAULT_CE_PTO];
+let PFA_PTO_DAYS = JSON.parse(localStorage.getItem('ce_pfa_pto_days')) || [...DEFAULT_PFA_PTO];
+let WK_TGTS = JSON.parse(localStorage.getItem('ce_wk_tgts')) || DEFAULT_WK_TGTS;
+
+let selMonth = 0; let selMode = 'current'; let chart = null;
+
+// ── UTILITIES ──
+const rv = id => parseFloat(document.getElementById(id).value) || 0;
+const fmt = n => Math.round(n).toLocaleString();
+
+// ── MODAL LOGIC ──
+function openSettingsModal() {
+  const tbody = document.getElementById('modal-table-body');
+  let html = '';
+  for (let i = 0; i < MONTHS.length; i++) {
+    html += `<tr><td><strong>${MONTHS[i]}</strong></td>
+      <td><input type="number" id="mod-apps-${i}" value="${PROJ_APPS_BASE[i]}"></td>
+      <td><input type="number" id="mod-tgt-${i}" value="${ENROLL_TGTS[i]}"></td>
+      <td><input type="number" id="mod-wd-${i}" value="${WORKING_DAYS[i]}"></td>
+      <td><input type="number" id="mod-pto-${i}" value="${PTO_DAYS[i]}"></td>
+      <td><input type="number" id="mod-pfapto-${i}" value="${PFA_PTO_DAYS[i]}"></td></tr>`;
+  }
+  tbody.innerHTML = html;
+  document.getElementById('ptoModal').classList.add('open');
+}
+function closeSettingsModal() { document.getElementById('ptoModal').classList.remove('open'); }
+function saveSettingsModal() {
+  for (let i = 0; i < MONTHS.length; i++) {
+    PROJ_APPS_BASE[i] = parseInt(document.getElementById(`mod-apps-${i}`).value) || 0;
+    ENROLL_TGTS[i] = parseInt(document.getElementById(`mod-tgt-${i}`).value) || 0;
+    WORKING_DAYS[i] = parseFloat(document.getElementById(`mod-wd-${i}`).value) || 0;
+    PTO_DAYS[i] = parseFloat(document.getElementById(`mod-pto-${i}`).value) || 0;
+    PFA_PTO_DAYS[i] = parseFloat(document.getElementById(`mod-pfapto-${i}`).value) || 0;
+  }
+  localStorage.setItem('ce_apps_base', JSON.stringify(PROJ_APPS_BASE));
+  localStorage.setItem('ce_enroll_tgts', JSON.stringify(ENROLL_TGTS));
+  localStorage.setItem('ce_working_days', JSON.stringify(WORKING_DAYS));
+  localStorage.setItem('ce_pto_days', JSON.stringify(PTO_DAYS));
+  localStorage.setItem('ce_pfa_pto_days', JSON.stringify(PFA_PTO_DAYS));
+  setMonth(selMonth);
+  closeSettingsModal();
+}
+function restoreDefaults() { 
+  if(confirm("Restore defaults?")) { 
+    PROJ_APPS_BASE=[...DEFAULT_APPS]; ENROLL_TGTS=[...DEFAULT_TGTS]; WORKING_DAYS=[...DEFAULT_WD]; PTO_DAYS=[...DEFAULT_CE_PTO]; PFA_PTO_DAYS=[...DEFAULT_PFA_PTO];
+    saveSettingsModal(); 
+  } 
+}
+function syncToArrays() {
+  PROJ_APPS_BASE[selMonth] = rv('apps-base-input');
+  ENROLL_TGTS[selMonth] = rv('enroll-target');
+  WORKING_DAYS[selMonth] = rv('workingDays');
+  PTO_DAYS[selMonth] = rv('ptoDays');
+  PFA_PTO_DAYS[selMonth] = rv('pfaPtoDays');
+  
+  localStorage.setItem('ce_apps_base', JSON.stringify(PROJ_APPS_BASE));
+  localStorage.setItem('ce_enroll_tgts', JSON.stringify(ENROLL_TGTS));
+  localStorage.setItem('ce_working_days', JSON.stringify(WORKING_DAYS));
+  localStorage.setItem('ce_pto_days', JSON.stringify(PTO_DAYS));
+  localStorage.setItem('ce_pfa_pto_days', JSON.stringify(PFA_PTO_DAYS));
+  sync();
+}
+
+// ── APP LOGIC ──
+function setMode(m) { 
+  selMode = m; 
+  document.getElementById('btn-current').className = 'mode-btn' + (m==='current'?' active-current':''); 
+  document.getElementById('btn-future').className = 'mode-btn' + (m==='future'?' active-future':''); 
+  sync(); 
+}
+
+function setMonth(i) { 
+  selMonth = i; 
+  document.querySelectorAll('.month-btn').forEach((b, idx) => b.classList.toggle('active', idx === i)); 
+  
+  document.getElementById('apps-base-input').value = PROJ_APPS_BASE[i]; 
+  document.getElementById('enroll-target').value = ENROLL_TGTS[i]; 
+  document.getElementById('workingDays').value = WORKING_DAYS[i]; 
+  document.getElementById('ptoDays').value = PTO_DAYS[i]; 
+  document.getElementById('pfaPtoDays').value = PFA_PTO_DAYS[i];
+
+  // Set local manual targets
+  document.getElementById('wt-psSched').value = WK_TGTS[i].psSched;
+  document.getElementById('wt-psComp').value = WK_TGTS[i].psComp;
+  document.getElementById('wt-evSched').value = WK_TGTS[i].evSched;
+  document.getElementById('wt-evComp').value = WK_TGTS[i].evComp;
+  document.getElementById('wt-enr').value = WK_TGTS[i].enr;
+
+  sync(); 
+}
+
+// Save manual targets dynamically without losing focus
+document.querySelectorAll('.wk-input').forEach(inp => {
+  inp.addEventListener('input', (e) => {
+    WK_TGTS[selMonth][e.target.id.replace('wt-', '')] = e.target.value;
+    localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
+    sync(); // Updates the +/- badges immediately
+  });
+});
+
+function calculateMetrics(mIdx) {
+  try {
+    const baseApps = PROJ_APPS_BASE[mIdx] || 1000;
+    const tgt = ENROLL_TGTS[mIdx] || 0;
+    const wd = WORKING_DAYS[mIdx] || 20;
+    const cePto = PTO_DAYS[mIdx] || 0;
+    const pfaPto = PFA_PTO_DAYS[mIdx] || 0;
+    
+    const ceShrink = 1 - (rv('shrinkage') / 100);
+    const pfaShrink = 1 - (rv('pfaShrinkage') / 100);
+
+    const apps = baseApps * (1 + (rv('appGrowth')/100));
+    const psSchedRate = rv('psSchedRate') / 100;
+    
+    const pfaApps = apps * (rv('pfaPct')/100);
+    const stdApps = apps - pfaApps;
+
+    // Demand Calcs
+    const cePsDemand = (selMode === 'current') ? apps * psSchedRate : stdApps * psSchedRate;
+    const pfaPsDemand = (selMode === 'future') ? pfaApps * psSchedRate : 0; 
+    const systemPsDemand = cePsDemand + pfaPsDemand;
+
+    const psToEvalConv = (rv('psComp')/100) * (rv('siRate')/100) * (rv('schedRate')/100);
+    const pfaBypassConv = 0.55; // Assumed baseline bypass conversion
+    const ceEvalDemand = (cePsDemand * psToEvalConv) + (selMode === 'future' ? pfaApps * pfaBypassConv : 0);
+
+    // CE Capacity Calcs
+    const ceHead = rv('stdCEs') + rv('leadCEs') || 1;
+    const netCeWd = Math.max(0, wd - (ceHead > 0 ? cePto / ceHead : 0));
+    
+    const cePsCap = ((rv('stdCEs') * rv('stdCePsQuota')) + (rv('leadCEs') * rv('leadCePsQuota'))) * netCeWd * ceShrink;
+    const ceEvCap = ((rv('stdCEs') * rv('stdCeEvalQuota')) + (rv('leadCEs') * rv('leadCeEvalQuota'))) * netCeWd * ceShrink;
+    
+    // Total Min req for CEs
+    const ceMinReq = (cePsDemand * rv('psAht')) + (ceEvalDemand * rv('evalAht'));
+    const ceDailyProdMins = (rv('stdCePsQuota') * rv('psAht')) + (rv('stdCeEvalQuota') * rv('evalAht'));
+    const monthlyMinsPerCE = ceDailyProdMins * netCeWd * ceShrink;
+    const reqCEs = monthlyMinsPerCE > 0 ? ceMinReq / monthlyMinsPerCE : 0;
+
+    // PFA Capacity Calcs
+    const pfaHead = rv('pfaHeadcount');
+    const pfaNetWd = Math.max(0, wd - (pfaHead > 0 ? pfaPto / pfaHead : 0)); 
+    const pfaDailyQuota = rv('pfaDailyQuota') || 1;
+    
+    const pfaPsCap = pfaHead * pfaDailyQuota * pfaNetWd * pfaShrink;
+    const systemPsCap = cePsCap + pfaPsCap;
+
+    const reqPFAs = (pfaDailyQuota * pfaNetWd * pfaShrink) > 0 ? pfaApps / (pfaDailyQuota * pfaNetWd * pfaShrink) : 0;
+
+    const evalComp = rv('evalComp')/100;
+    const enrollRate = rv('enrollRate')/100;
+    const maxYield = ceEvCap * evalComp * enrollRate;
+    const actualEnrolled = ceEvalDemand * evalComp * enrollRate;
+    const actualPsComp = systemPsDemand * (rv('psComp')/100);
+    const actualEvComp = ceEvalDemand * evalComp;
+
+    return { apps, systemPsDemand, ceEvalDemand, cePsCap, ceEvCap, pfaPsCap, systemPsCap, reqCEs, reqPFAs, pfaApps, maxYield, actualEnrolled, actualPsComp, actualEvComp, tgt };
+  } catch (e) {
+    console.error(e); return { reqCEs: 0, systemPsDemand: 0, ceEvalDemand: 0 };
+  }
+}
+
+function updateWkRow(id, dem, cap) {
+  const tgtVal = parseFloat(document.getElementById('wt-' + id).value) || 0;
+  const demGap = dem - tgtVal;
+  const isDemMet = demGap >= 0;
+  const badge = `<span class="weekly-status ${isDemMet ? 'ws-green' : 'ws-red'}"></span>`;
+  
+  document.getElementById('wd-' + id).innerHTML = `${badge}${fmt(dem)} <span style="color:#64748b; font-size:10px;">(${isDemMet?'+':''}${fmt(demGap)})</span>`;
+  document.getElementById('wc-' + id).textContent = fmt(cap);
+}
+
+function sync() {
+  const m = calculateMetrics(selMonth);
+
+  // Read-only Updates
+  ['appGrowth', 'psAht', 'evalAht', 'pfaPct', 'psSchedRate', 'shrinkage', 'pfaShrinkage', 'psComp', 'siRate', 'schedRate', 'evalComp', 'enrollRate'].forEach(id => {
+    const el = document.getElementById(id + '-v');
+    if (el) el.textContent = (id.includes('Aht') ? rv(id) + 'm' : (id==='appGrowth' ? '+' : '') + rv(id) + '%');
+  });
+  document.getElementById('gross-ps-ro').textContent = fmt(m.apps * (rv('psSchedRate')/100));
+
+  // Executive Metrics
+  const sysPsUtil = m.systemPsCap > 0 ? (m.systemPsDemand / m.systemPsCap) * 100 : 0;
+  const evUtil = m.ceEvCap > 0 ? (m.ceEvalDemand / m.ceEvCap) * 100 : 0;
+
+  document.getElementById('metrics-output').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">PS Utilization</div>
+      <div class="stat-value">${Math.round(sysPsUtil)}%</div>
+      <div class="util-bar-bg"><div class="util-bar-fill ${sysPsUtil > 100 ? 'util-red' : 'util-green'}" style="width:${Math.min(100, sysPsUtil)}%"></div></div>
+      <div class="stat-sub">CE Cap: ${fmt(m.cePsCap)} · PFA Cap: ${fmt(m.pfaPsCap)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Eval Utilization</div>
+      <div class="stat-value">${Math.round(evUtil)}%</div>
+      <div class="util-bar-bg"><div class="util-bar-fill ${evUtil > 100 ? 'util-red' : 'util-green'}" style="width:${Math.min(100, evUtil)}%"></div></div>
+      <div class="stat-sub">CE Eval Cap: ${fmt(m.ceEvCap)}</div>
+    </div>
+    <div class="stat-card hl">
+      <div class="stat-label">Req CE Headcount</div>
+      <div class="stat-value">${m.reqCEs.toFixed(1)}</div>
+      <div class="stat-sub">Current: ${rv('stdCEs') + rv('leadCEs')}</div>
+    </div>
+    <div class="stat-card hl" style="border-color:#10b981; background:#0f2a1a;">
+      <div class="stat-label" style="color:#86efac;">Req PFA Headcount</div>
+      <div class="stat-value">${m.reqPFAs.toFixed(1)}</div>
+      <div class="stat-sub" style="color:#86efac;">Current: ${rv('pfaHeadcount')}</div>
+    </div>
+  `;
+
+  // Target Banner
+  const totalConvRate = (rv('evalComp')/100) * (rv('enrollRate')/100);
+  document.getElementById('target-banner').innerHTML = `
+    <div class="tb-item"><div class="tb-label">Enroll Target</div><div class="tb-val">${fmt(m.tgt)}</div></div>
+    <div class="tb-sep"></div>
+    <div class="tb-item"><div class="tb-label">Target Evals Needed</div><div class="tb-val" style="color:#a5b4fc">${fmt(m.tgt / totalConvRate)}</div></div>
+    <div class="tb-sep"></div>
+    <div class="tb-item"><div class="tb-label">Max Cap Yield</div><div class="tb-val" style="color:#a5b4fc">${fmt(m.maxYield)}</div></div>
+    <div class="tb-sep"></div>
+    <div class="tb-item"><div class="tb-label">Variance</div><div class="tb-val" style="color:${m.maxYield>=m.tgt?'#22c55e':'#ef4444'}">${m.maxYield>=m.tgt?'+':''}${fmt(m.maxYield-m.tgt)}</div></div>
+  `;
+
+  // Weekly Table Manual Sync
+  updateWkRow('psSched', m.systemPsDemand / WEEKS_PER_MONTH, m.systemPsCap / WEEKS_PER_MONTH);
+  updateWkRow('psComp', m.actualPsComp / WEEKS_PER_MONTH, (m.systemPsCap * (rv('psComp')/100)) / WEEKS_PER_MONTH);
+  updateWkRow('evSched', m.ceEvalDemand / WEEKS_PER_MONTH, m.ceEvCap / WEEKS_PER_MONTH);
+  updateWkRow('evComp', m.actualEvComp / WEEKS_PER_MONTH, (m.ceEvCap * (rv('evalComp')/100)) / WEEKS_PER_MONTH);
+  updateWkRow('enr', m.actualEnrolled / WEEKS_PER_MONTH, m.maxYield / WEEKS_PER_MONTH);
+
+  // Narrative
+  document.getElementById('narrative-output').innerHTML = `
+    <h3>Monthly Executive Insight</h3>
+    <p>Handling <strong>${fmt(m.systemPsDemand)}</strong> total system phone screens and <strong>${fmt(m.ceEvalDemand)}</strong> clinical evaluations requires <strong>${m.reqCEs.toFixed(1)} CEs</strong>. 
+    To process the <strong>${fmt(m.pfaApps)}</strong> apps diverted to the PFA pathway at a quota of <strong>${rv('pfaDailyQuota')}</strong> apps/day, we require <strong>${m.reqPFAs.toFixed(1)} PFAs</strong>.</p>
+  `;
+
+  // Funnel
+  const maxBar = Math.max(m.systemPsDemand, m.systemPsCap) * 1.1;
+  document.getElementById('demand-bars').innerHTML = `
+    <div class="funnel-row"><div class="funnel-lbl">Total PS Demand</div><div class="funnel-bar-wrap"><div class="funnel-bar bar-std" style="width:${(m.systemPsDemand/maxBar)*100}%"><span>${fmt(m.systemPsDemand)}</span></div></div></div>
+    <div class="funnel-row"><div class="funnel-lbl">Total Eval Demand</div><div class="funnel-bar-wrap"><div class="funnel-bar bar-std" style="width:${(m.ceEvalDemand/maxBar)*100}%"><span>${fmt(m.ceEvalDemand)}</span></div></div></div>
+  `;
+  document.getElementById('capacity-bars').innerHTML = `
+    <div class="funnel-row"><div class="funnel-lbl">CE PS Capacity</div><div class="funnel-bar-wrap"><div class="funnel-bar bar-cap" style="width:${(m.cePsCap/maxBar)*100}%"><span>${fmt(m.cePsCap)}</span></div></div></div>
+    <div class="funnel-row"><div class="funnel-lbl">PFA PS Capacity</div><div class="funnel-bar-wrap"><div class="funnel-bar bar-pfa" style="width:${(m.pfaPsCap/maxBar)*100}%"><span>${fmt(m.pfaPsCap)}</span></div></div></div>
+    <div class="funnel-row"><div class="funnel-lbl">CE Eval Capacity</div><div class="funnel-bar-wrap"><div class="funnel-bar bar-cap" style="width:${(m.ceEvCap/maxBar)*100}%"><span>${fmt(m.ceEvCap)}</span></div></div></div>
+  `;
+
+  updateChart();
+}
+
+function updateChart() {
+  const reqCeData = MONTHS.map((_, i) => calculateMetrics(i).reqCEs);
+  const reqPfaData = MONTHS.map((_, i) => calculateMetrics(i).reqPFAs);
+  const curCeStaff = rv('stdCEs') + rv('leadCEs');
+  const curPfaStaff = rv('pfaHeadcount');
+  
+  if (chart) { 
+    chart.data.datasets[0].data = reqCeData; 
+    chart.data.datasets[1].data = MONTHS.map(() => curCeStaff);
+    chart.data.datasets[2].data = reqPfaData;
+    chart.data.datasets[3].data = MONTHS.map(() => curPfaStaff);
+    chart.update(); 
+    return; 
+  }
+  
+  chart = new Chart(document.getElementById('headcountChart').getContext('2d'), {
+    type: 'line', 
+    data: { 
+      labels: MONTHS, 
+      datasets: [
+        { label: 'Req CEs', data: reqCeData, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', fill: true, tension: 0.3 },
+        { label: 'Current CEs', data: MONTHS.map(() => curCeStaff), borderColor: '#3b82f6', borderDash: [5,5], pointRadius: 0 },
+        { label: 'Req PFAs', data: reqPfaData, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.3 },
+        { label: 'Current PFAs', data: MONTHS.map(() => curPfaStaff), borderColor: '#06b6d4', borderDash: [5,5], pointRadius: 0 }
+      ] 
+    },
+    options: { 
+      responsive: true, maintainAspectRatio: false, 
+      plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8' } } },
+      scales: { 
+        y: { beginAtZero: false, grid: { color: '#2d3548' }, ticks: { color: '#94a3b8' } },
+        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+      } 
+    }
+  });
+}
+
+// Initial binding
+document.querySelectorAll('input:not(.wk-input)').forEach(i => i.addEventListener('input', sync));
+window.onload = () => { setMonth(0); };
+</script>
+</body>
+</html>

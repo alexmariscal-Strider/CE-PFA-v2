@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CE + PFA Capacity Arbitrage v12</title>
+<title>CE + PFA Capacity Arbitrage v13</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -62,7 +62,6 @@
   .tb-val { font-size: 20px; font-weight: 700; }
   .tb-sep { width:1px; height:36px; background:#2d3548; }
 
-  /* WEEKLY TABLE CSS */
   .capacity-table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom: 14px; }
   .capacity-table th { text-align:left; color:#64748b; font-size:10px; text-transform:uppercase; letter-spacing:.06em; padding:6px 8px; border-bottom:1px solid #2d3548; }
   .capacity-table td { padding:8px; border-bottom:1px solid #1a2030; color:#cbd5e1; }
@@ -109,7 +108,7 @@
 </head>
 <body>
 
-<h1>CE + PFA Capacity Arbitrage v12</h1>
+<h1>CE + PFA Capacity Arbitrage v13</h1>
 <p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment</p>
 
 <div class="mode-wrap">
@@ -356,7 +355,6 @@ function setMonth(i) {
   document.getElementById('ptoDays').value = PTO_DAYS[i]; 
   document.getElementById('pfaPtoDays').value = PFA_PTO_DAYS[i];
 
-  // Set local manual targets
   document.getElementById('wt-psSched').value = WK_TGTS[i].psSched;
   document.getElementById('wt-psComp').value = WK_TGTS[i].psComp;
   document.getElementById('wt-evSched').value = WK_TGTS[i].evSched;
@@ -366,12 +364,11 @@ function setMonth(i) {
   sync(); 
 }
 
-// Save manual targets dynamically without losing focus
 document.querySelectorAll('.wk-input').forEach(inp => {
   inp.addEventListener('input', (e) => {
     WK_TGTS[selMonth][e.target.id.replace('wt-', '')] = e.target.value;
     localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
-    sync(); // Updates the +/- badges immediately
+    sync(); 
   });
 });
 
@@ -398,7 +395,7 @@ function calculateMetrics(mIdx) {
     const systemPsDemand = cePsDemand + pfaPsDemand;
 
     const psToEvalConv = (rv('psComp')/100) * (rv('siRate')/100) * (rv('schedRate')/100);
-    const pfaBypassConv = 0.55; // Assumed baseline bypass conversion
+    const pfaBypassConv = 0.55; 
     const ceEvalDemand = (cePsDemand * psToEvalConv) + (selMode === 'future' ? pfaApps * pfaBypassConv : 0);
 
     // CE Capacity Calcs
@@ -486,12 +483,14 @@ function sync() {
     </div>
   `;
 
+  // Target Ratio for proper run-rate scaling
+  const yieldRatio = m.actualEnrolled > 0 ? (m.tgt / m.actualEnrolled) : 0;
+
   // Target Banner
-  const totalConvRate = (rv('evalComp')/100) * (rv('enrollRate')/100);
   document.getElementById('target-banner').innerHTML = `
     <div class="tb-item"><div class="tb-label">Enroll Target</div><div class="tb-val">${fmt(m.tgt)}</div></div>
     <div class="tb-sep"></div>
-    <div class="tb-item"><div class="tb-label">Target Evals Needed</div><div class="tb-val" style="color:#a5b4fc">${fmt(m.tgt / totalConvRate)}</div></div>
+    <div class="tb-item"><div class="tb-label">Target Evals Needed</div><div class="tb-val" style="color:#a5b4fc">${fmt(m.actualEvComp * yieldRatio)}</div></div>
     <div class="tb-sep"></div>
     <div class="tb-item"><div class="tb-label">Max Cap Yield</div><div class="tb-val" style="color:#a5b4fc">${fmt(m.maxYield)}</div></div>
     <div class="tb-sep"></div>
@@ -555,7 +554,23 @@ function updateChart() {
     },
     options: { 
       responsive: true, maintainAspectRatio: false, 
-      plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8' } } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: { 
+        legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8' } },
+        tooltip: {
+          backgroundColor: 'rgba(15, 17, 23, 0.9)',
+          titleColor: '#f1f5f9',
+          bodyColor: '#cbd5e1',
+          borderColor: '#3d4a63',
+          borderWidth: 1,
+          padding: 10,
+          callbacks: {
+            label: function(context) {
+              return context.dataset.label + ': ' + context.parsed.y.toFixed(1);
+            }
+          }
+        }
+      },
       scales: { 
         y: { beginAtZero: false, grid: { color: '#2d3548' }, ticks: { color: '#94a3b8' } },
         x: { grid: { display: false }, ticks: { color: '#94a3b8' } }

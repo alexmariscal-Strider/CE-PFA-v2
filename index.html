@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CE + PFA Capacity Arbitrage v13</title>
+<title>CE + PFA Capacity Arbitrage v15</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -19,12 +19,6 @@
   .action-btn:hover { background: #2563eb; border-color: #1d4ed8; }
   .danger-btn { background: transparent; border: 1px solid #ef4444; color: #ef4444; font-weight: 600; cursor: pointer; padding: 8px 12px; border-radius: 6px; }
   .danger-btn:hover { background: #ef4444; color: #ffffff; }
-
-  .mode-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-  .mode-bar { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid #2d3548; }
-  .mode-btn { padding: 7px 16px; background: #1e2330; color: #94a3b8; font-size: 12px; cursor: pointer; border: none; transition: all 0.15s; }
-  .mode-btn.active-current { background: #1e3a5f; color: #93c5fd; font-weight: 700; }
-  .mode-btn.active-future  { background: #14532d; color: #86efac; font-weight: 700; }
 
   .grid { display: grid; grid-template-columns: 340px 1fr; gap: 16px; }
   .panel { background: #1e2330; border-radius: 10px; padding: 16px; border: 1px solid #2d3548; }
@@ -62,6 +56,7 @@
   .tb-val { font-size: 20px; font-weight: 700; }
   .tb-sep { width:1px; height:36px; background:#2d3548; }
 
+  /* WEEKLY TABLE CSS */
   .capacity-table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom: 14px; }
   .capacity-table th { text-align:left; color:#64748b; font-size:10px; text-transform:uppercase; letter-spacing:.06em; padding:6px 8px; border-bottom:1px solid #2d3548; }
   .capacity-table td { padding:8px; border-bottom:1px solid #1a2030; color:#cbd5e1; }
@@ -87,8 +82,10 @@
   .bar-pfa { background: #10b981; }
 
   .narrative-box { background: #1e2330; border-left: 4px solid #6366f1; padding: 14px; border-radius: 6px; margin-top: 14px; border: 1px solid #3d4a63; border-left-width: 4px; }
-  .narrative-box h3 { font-size: 11px; text-transform: uppercase; color: #a5b4fc; margin-bottom: 6px; }
-  .narrative-box p { font-size: 12px; line-height: 1.5; color: #cbd5e1; }
+  .narrative-box h3 { font-size: 11px; text-transform: uppercase; color: #a5b4fc; margin-bottom: 8px; }
+  .narrative-box p { font-size: 13px; line-height: 1.6; color: #cbd5e1; margin-bottom: 8px; }
+  .narrative-box p:last-child { margin-bottom: 0; }
+  .narrative-box strong { color: #f8fafc; }
 
   .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 17, 23, 0.85); z-index: 1000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
   .modal-overlay.open { display: flex; }
@@ -108,16 +105,8 @@
 </head>
 <body>
 
-<h1>CE + PFA Capacity Arbitrage v13</h1>
-<p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment</p>
-
-<div class="mode-wrap">
-  <span class="mode-label">Pathway Mode:</span>
-  <div class="mode-bar">
-    <button class="mode-btn active-current" id="btn-current" onclick="setMode('current')" title="Current: CEs conduct Phone Screens for all apps.">📞 Current State</button>
-    <button class="mode-btn" id="btn-future" onclick="setMode('future')" title="Future: Diverted apps bypass CE Phone Screens and go straight to CEs for Eval.">🚀 Future State (Bypass)</button>
-  </div>
-</div>
+<h1>CE + PFA Capacity Arbitrage v15</h1>
+<p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment (Integrated Bypass Engine)</p>
 
 <div class="month-bar">
   <span class="month-bar-label">Month:</span>
@@ -168,7 +157,7 @@
     <div class="input-row"><label>PFA Shrinkage (%)</label><input type="range" id="pfaShrinkage" min="0" max="25" value="5"><span class="val-badge" id="pfaShrinkage-v">5%</span></div>
 
     <div class="section-label" style="color:#22c55e;">PFA Capacity Arbitrage</div>
-    <div class="input-row"><label>PSs Diverted to PFA % <span title="Percentage of Apps routed to the PFA workflow." style="cursor:help;">ⓘ</span></label><input type="range" id="pfaPct" min="0" max="100" value="37"><span class="val-badge" id="pfaPct-v">37%</span></div>
+    <div class="input-row"><label>PSs Diverted to PFA % <span title="Set to 0% to view standard Current State." style="cursor:help;">ⓘ</span></label><input type="range" id="pfaPct" min="0" max="100" value="37"><span class="val-badge" id="pfaPct-v">37%</span></div>
 
     <div class="section-label">Funnel Rates</div>
     <div class="input-row"><label>PS Completion %</label><input type="range" id="psComp" value="74"><span class="val-badge" id="psComp-v">74%</span></div>
@@ -278,7 +267,7 @@ let PTO_DAYS = JSON.parse(localStorage.getItem('ce_pto_days')) || [...DEFAULT_CE
 let PFA_PTO_DAYS = JSON.parse(localStorage.getItem('ce_pfa_pto_days')) || [...DEFAULT_PFA_PTO];
 let WK_TGTS = JSON.parse(localStorage.getItem('ce_wk_tgts')) || DEFAULT_WK_TGTS;
 
-let selMonth = 0; let selMode = 'current'; let chart = null;
+let selMonth = 0; let chart = null;
 
 // ── UTILITIES ──
 const rv = id => parseFloat(document.getElementById(id).value) || 0;
@@ -338,13 +327,6 @@ function syncToArrays() {
 }
 
 // ── APP LOGIC ──
-function setMode(m) { 
-  selMode = m; 
-  document.getElementById('btn-current').className = 'mode-btn' + (m==='current'?' active-current':''); 
-  document.getElementById('btn-future').className = 'mode-btn' + (m==='future'?' active-future':''); 
-  sync(); 
-}
-
 function setMonth(i) { 
   selMonth = i; 
   document.querySelectorAll('.month-btn').forEach((b, idx) => b.classList.toggle('active', idx === i)); 
@@ -389,14 +371,14 @@ function calculateMetrics(mIdx) {
     const pfaApps = apps * (rv('pfaPct')/100);
     const stdApps = apps - pfaApps;
 
-    // Demand Calcs
-    const cePsDemand = (selMode === 'current') ? apps * psSchedRate : stdApps * psSchedRate;
-    const pfaPsDemand = (selMode === 'future') ? pfaApps * psSchedRate : 0; 
+    // Unified Demand Calcs
+    const cePsDemand = stdApps * psSchedRate;
+    const pfaPsDemand = pfaApps * psSchedRate; 
     const systemPsDemand = cePsDemand + pfaPsDemand;
 
     const psToEvalConv = (rv('psComp')/100) * (rv('siRate')/100) * (rv('schedRate')/100);
     const pfaBypassConv = 0.55; 
-    const ceEvalDemand = (cePsDemand * psToEvalConv) + (selMode === 'future' ? pfaApps * pfaBypassConv : 0);
+    const ceEvalDemand = (cePsDemand * psToEvalConv) + (pfaApps * pfaBypassConv);
 
     // CE Capacity Calcs
     const ceHead = rv('stdCEs') + rv('leadCEs') || 1;
@@ -454,32 +436,43 @@ function sync() {
   });
   document.getElementById('gross-ps-ro').textContent = fmt(m.apps * (rv('psSchedRate')/100));
 
-  // Executive Metrics
+  // Executive Metrics Headroom Math
   const sysPsUtil = m.systemPsCap > 0 ? (m.systemPsDemand / m.systemPsCap) * 100 : 0;
+  const psHeadroom = m.systemPsCap - m.systemPsDemand;
+  const psHeadStr = psHeadroom >= 0 ? `<span style="color:#22c55e;">+${fmt(psHeadroom)} headroom</span>` : `<span style="color:#ef4444;">${fmt(Math.abs(psHeadroom))} shortfall</span>`;
+  
   const evUtil = m.ceEvCap > 0 ? (m.ceEvalDemand / m.ceEvCap) * 100 : 0;
+  const evHeadroom = m.ceEvCap - m.ceEvalDemand;
+  const evHeadStr = evHeadroom >= 0 ? `<span style="color:#22c55e;">+${fmt(evHeadroom)} headroom</span>` : `<span style="color:#ef4444;">${fmt(Math.abs(evHeadroom))} shortfall</span>`;
+
+  const curCEs = rv('stdCEs') + rv('leadCEs');
+  const ceDeficit = m.reqCEs - curCEs;
+  const ceStaffStr = ceDeficit > 0.5 ? `<span style="color:#ef4444;">+${ceDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`;
+
+  const curPFAs = rv('pfaHeadcount');
 
   document.getElementById('metrics-output').innerHTML = `
     <div class="stat-card">
       <div class="stat-label">PS Utilization</div>
       <div class="stat-value">${Math.round(sysPsUtil)}%</div>
       <div class="util-bar-bg"><div class="util-bar-fill ${sysPsUtil > 100 ? 'util-red' : 'util-green'}" style="width:${Math.min(100, sysPsUtil)}%"></div></div>
-      <div class="stat-sub">CE Cap: ${fmt(m.cePsCap)} · PFA Cap: ${fmt(m.pfaPsCap)}</div>
+      <div class="stat-sub">Sys Cap: ${fmt(m.systemPsCap)} · ${psHeadStr}</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Eval Utilization</div>
       <div class="stat-value">${Math.round(evUtil)}%</div>
       <div class="util-bar-bg"><div class="util-bar-fill ${evUtil > 100 ? 'util-red' : 'util-green'}" style="width:${Math.min(100, evUtil)}%"></div></div>
-      <div class="stat-sub">CE Eval Cap: ${fmt(m.ceEvCap)}</div>
+      <div class="stat-sub">CE Eval Cap: ${fmt(m.ceEvCap)} · ${evHeadStr}</div>
     </div>
     <div class="stat-card hl">
-      <div class="stat-label">Req CE Headcount</div>
+      <div class="stat-label">Required CE Headcount</div>
       <div class="stat-value">${m.reqCEs.toFixed(1)}</div>
-      <div class="stat-sub">Current: ${rv('stdCEs') + rv('leadCEs')}</div>
+      <div class="stat-sub">Current: ${curCEs} · ${ceStaffStr}</div>
     </div>
     <div class="stat-card hl" style="border-color:#10b981; background:#0f2a1a;">
-      <div class="stat-label" style="color:#86efac;">Req PFA Headcount</div>
+      <div class="stat-label" style="color:#86efac;">Required PFA Headcount</div>
       <div class="stat-value">${m.reqPFAs.toFixed(1)}</div>
-      <div class="stat-sub" style="color:#86efac;">Current: ${rv('pfaHeadcount')}</div>
+      <div class="stat-sub" style="color:#86efac;">Current: ${curPFAs} · Processing ${fmt(m.pfaApps)} PSs</div>
     </div>
   `;
 
@@ -504,12 +497,39 @@ function sync() {
   updateWkRow('evComp', m.actualEvComp / WEEKS_PER_MONTH, (m.ceEvCap * (rv('evalComp')/100)) / WEEKS_PER_MONTH);
   updateWkRow('enr', m.actualEnrolled / WEEKS_PER_MONTH, m.maxYield / WEEKS_PER_MONTH);
 
-  // Narrative
-  document.getElementById('narrative-output').innerHTML = `
-    <h3>Monthly Executive Insight</h3>
-    <p>Handling <strong>${fmt(m.systemPsDemand)}</strong> total system phone screens and <strong>${fmt(m.ceEvalDemand)}</strong> clinical evaluations requires <strong>${m.reqCEs.toFixed(1)} CEs</strong>. 
-    To process the <strong>${fmt(m.pfaApps)}</strong> apps diverted to the PFA pathway at a quota of <strong>${rv('pfaDailyQuota')}</strong> apps/day, we require <strong>${m.reqPFAs.toFixed(1)} PFAs</strong>.</p>
-  `;
+  // Dynamic Narrative Generation
+  let narrative = `<h3>Monthly Executive Insight</h3>`;
+
+  // 1. Overall Goal Status
+  if (m.maxYield >= m.tgt) {
+    narrative += `<p><strong>✅ Target Achievable:</strong> Based on current routing and capacity, the system is positioned to theoretically yield <strong>${fmt(m.maxYield)} enrollments</strong>, exceeding the monthly target of ${fmt(m.tgt)}.</p>`;
+  } else {
+    narrative += `<p><strong>⚠️ Target at Risk:</strong> The system's maximum theoretical yield is <strong>${fmt(m.maxYield)} enrollments</strong>, falling short of the ${fmt(m.tgt)} target by ${fmt(m.tgt - m.maxYield)}. To close this gap, we must either increase top-of-funnel volume or improve mid-funnel conversion rates.</p>`;
+  }
+
+  // 2. Staffing Health (CEs)
+  if (ceDeficit > 0.5) {
+    narrative += `<p><strong>CE Staffing:</strong> We are currently understaffed by roughly <strong>${ceDeficit.toFixed(1)} CEs</strong>. To handle the projected demand of ${fmt(m.ceEvalDemand)} clinical evaluations without overwhelming the team, we must increase headcount or shift more top-of-funnel volume to PFAs.</p>`;
+  } else if (ceDeficit < -0.5) {
+    narrative += `<p><strong>CE Staffing:</strong> We have a healthy surplus of CE capacity (approx. ${Math.abs(ceDeficit).toFixed(1)} CEs). The team is well-staffed to clear the clinical queue.</p>`;
+  } else {
+    narrative += `<p><strong>CE Staffing:</strong> CE headcount is perfectly balanced with incoming clinical demand.</p>`;
+  }
+
+  // 3. PFA Arbitrage / Bypass Impact
+  let pfaDeficit = m.reqPFAs - curPFAs;
+  if (m.pfaApps > 0) {
+      narrative += `<p><strong>PFA Arbitrage Strategy:</strong> By diverting ${rv('pfaPct')}% of applications to the PFA bypass pathway, we are effectively saving CEs from conducting ${fmt(m.pfaApps)} phone screens. `;
+      if (pfaDeficit > 0.5) {
+          narrative += `However, we are currently short <strong>${pfaDeficit.toFixed(1)} PFAs</strong> to process this diverted volume efficiently.</p>`;
+      } else {
+          narrative += `Our PFA team is appropriately staffed to absorb this routed volume.</p>`;
+      }
+  } else {
+      narrative += `<p><strong>PFA Arbitrage Strategy:</strong> Currently, 0% of volume is diverted to PFAs. Increasing PFA diversion could free up CE capacity for more clinical evaluations if a bottleneck occurs.</p>`;
+  }
+
+  document.getElementById('narrative-output').innerHTML = narrative;
 
   // Funnel
   const maxBar = Math.max(m.systemPsDemand, m.systemPsCap) * 1.1;
@@ -546,9 +566,9 @@ function updateChart() {
     data: { 
       labels: MONTHS, 
       datasets: [
-        { label: 'Req CEs', data: reqCeData, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', fill: true, tension: 0.3 },
+        { label: 'Required CEs', data: reqCeData, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', fill: true, tension: 0.3 },
         { label: 'Current CEs', data: MONTHS.map(() => curCeStaff), borderColor: '#3b82f6', borderDash: [5,5], pointRadius: 0 },
-        { label: 'Req PFAs', data: reqPfaData, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.3 },
+        { label: 'Required PFAs', data: reqPfaData, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.3 },
         { label: 'Current PFAs', data: MONTHS.map(() => curPfaStaff), borderColor: '#06b6d4', borderDash: [5,5], pointRadius: 0 }
       ] 
     },

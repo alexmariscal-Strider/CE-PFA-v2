@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CE + PFA Capacity Arbitrage v16</title>
+<title>CE + PFA Capacity Arbitrage v17</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -19,6 +19,12 @@
   .action-btn:hover { background: #2563eb; border-color: #1d4ed8; }
   .danger-btn { background: transparent; border: 1px solid #ef4444; color: #ef4444; font-weight: 600; cursor: pointer; padding: 8px 12px; border-radius: 6px; }
   .danger-btn:hover { background: #ef4444; color: #ffffff; }
+
+  .mode-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .mode-bar { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid #2d3548; }
+  .mode-btn { padding: 7px 16px; background: #1e2330; color: #94a3b8; font-size: 12px; cursor: pointer; border: none; transition: all 0.15s; }
+  .mode-btn.active-current { background: #1e3a5f; color: #93c5fd; font-weight: 700; }
+  .mode-btn.active-future  { background: #14532d; color: #86efac; font-weight: 700; }
 
   .grid { display: grid; grid-template-columns: 340px 1fr; gap: 16px; }
   .panel { background: #1e2330; border-radius: 10px; padding: 16px; border: 1px solid #2d3548; }
@@ -105,7 +111,7 @@
 </head>
 <body>
 
-<h1>CE + PFA Capacity Arbitrage v16</h1>
+<h1>CE + PFA Capacity Arbitrage v17</h1>
 <p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment (Integrated Bypass Engine)</p>
 
 <div class="month-bar">
@@ -124,6 +130,14 @@
   <div class="panel">
     <h2>Inputs</h2>
     
+    <div class="section-label">Scenario Presets</div>
+    <div class="input-row" style="margin-bottom: 16px;">
+      <select id="preset-select" style="flex: 1; background: #0f1117; color: #f1f5f9; border: 1px solid #3d4a63; border-radius: 4px; padding: 5px; font-size: 12px; margin-right: 6px; outline: none;"></select>
+      <button class="month-btn action-btn" onclick="savePreset()" style="padding: 5px 10px;" title="Save current parameters as a new preset">Save</button>
+      <button class="month-btn" onclick="loadPreset()" style="padding: 5px 10px;" title="Load selected preset">Load</button>
+      <button class="month-btn danger-btn" onclick="deletePreset()" style="padding: 5px 10px; background: transparent;" title="Delete selected preset">X</button>
+    </div>
+
     <div class="section-label">Volume & Forecasting</div>
     <div class="input-row"><label>Accepted Apps (base)</label><input type="number" id="apps-base-input" onchange="syncToArrays()"></div>
     <div class="input-row"><label>App Volume Bump (%)</label><input type="range" id="appGrowth" min="0" max="50" value="10"><span class="val-badge" id="appGrowth-v">10%</span></div>
@@ -267,11 +281,96 @@ let PTO_DAYS = JSON.parse(localStorage.getItem('ce_pto_days')) || [...DEFAULT_CE
 let PFA_PTO_DAYS = JSON.parse(localStorage.getItem('ce_pfa_pto_days')) || [...DEFAULT_PFA_PTO];
 let WK_TGTS = JSON.parse(localStorage.getItem('ce_wk_tgts')) || DEFAULT_WK_TGTS;
 
+// Preset Logic Variables
+const PRESET_INPUTS = ['appGrowth', 'psSchedRate', 'stdCEs', 'leadCEs', 'pfaHeadcount', 'stdCePsQuota', 'stdCeEvalQuota', 'leadCePsQuota', 'leadCeEvalQuota', 'pfaDailyQuota', 'psAht', 'evalAht', 'shrinkage', 'pfaShrinkage', 'pfaPct', 'psComp', 'siRate', 'schedRate', 'evalComp', 'enrollRate'];
+let PRESETS = JSON.parse(localStorage.getItem('ce_presets')) || {};
+
 let selMonth = 0; let chart = null;
 
 // ── UTILITIES ──
 const rv = id => parseFloat(document.getElementById(id).value) || 0;
 const fmt = n => Math.round(n).toLocaleString();
+
+// ── PRESET LOGIC ──
+function updatePresetDropdown() {
+  const sel = document.getElementById('preset-select');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">-- Select Scenario Preset --</option>';
+  Object.keys(PRESETS).forEach(name => {
+    sel.innerHTML += `<option value="${name}">${name}</option>`;
+  });
+}
+
+function savePreset() {
+  const name = prompt("Enter a name for this Scenario Preset:");
+  if (!name) return;
+  
+  const presetData = {
+    inputs: {},
+    arrays: {
+      PROJ_APPS_BASE: [...PROJ_APPS_BASE],
+      ENROLL_TGTS: [...ENROLL_TGTS],
+      WORKING_DAYS: [...WORKING_DAYS],
+      PTO_DAYS: [...PTO_DAYS],
+      PFA_PTO_DAYS: [...PFA_PTO_DAYS],
+      WK_TGTS: JSON.parse(JSON.stringify(WK_TGTS))
+    }
+  };
+  
+  PRESET_INPUTS.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) presetData.inputs[id] = el.value;
+  });
+  
+  PRESETS[name] = presetData;
+  localStorage.setItem('ce_presets', JSON.stringify(PRESETS));
+  updatePresetDropdown();
+  document.getElementById('preset-select').value = name;
+}
+
+function loadPreset() {
+  const sel = document.getElementById('preset-select');
+  if(!sel || !sel.value) return;
+  const data = PRESETS[sel.value];
+  if(!data) return;
+  
+  if (data.inputs) {
+    PRESET_INPUTS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && data.inputs[id] !== undefined) {
+        el.value = data.inputs[id];
+      }
+    });
+  }
+  
+  if (data.arrays) {
+    PROJ_APPS_BASE = [...data.arrays.PROJ_APPS_BASE];
+    ENROLL_TGTS = [...data.arrays.ENROLL_TGTS];
+    WORKING_DAYS = [...data.arrays.WORKING_DAYS];
+    PTO_DAYS = [...data.arrays.PTO_DAYS];
+    PFA_PTO_DAYS = [...data.arrays.PFA_PTO_DAYS];
+    if(data.arrays.WK_TGTS) WK_TGTS = JSON.parse(JSON.stringify(data.arrays.WK_TGTS));
+    
+    localStorage.setItem('ce_apps_base', JSON.stringify(PROJ_APPS_BASE));
+    localStorage.setItem('ce_enroll_tgts', JSON.stringify(ENROLL_TGTS));
+    localStorage.setItem('ce_working_days', JSON.stringify(WORKING_DAYS));
+    localStorage.setItem('ce_pto_days', JSON.stringify(PTO_DAYS));
+    localStorage.setItem('ce_pfa_pto_days', JSON.stringify(PFA_PTO_DAYS));
+    localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
+  }
+  
+  setMonth(selMonth); 
+}
+
+function deletePreset() {
+  const sel = document.getElementById('preset-select');
+  if(!sel || !sel.value) return;
+  if(confirm(`Are you sure you want to delete preset "${sel.value}"?`)) {
+    delete PRESETS[sel.value];
+    localStorage.setItem('ce_presets', JSON.stringify(PRESETS));
+    updatePresetDropdown();
+  }
+}
 
 // ── MODAL LOGIC ──
 function openSettingsModal() {
@@ -600,7 +699,10 @@ function updateChart() {
 
 // Initial binding
 document.querySelectorAll('input:not(.wk-input)').forEach(i => i.addEventListener('input', sync));
-window.onload = () => { setMonth(0); };
+window.onload = () => { 
+  updatePresetDropdown();
+  setMonth(0); 
+};
 </script>
 </body>
 </html>

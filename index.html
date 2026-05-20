@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CE + PFA Capacity Arbitrage v19</title>
+<title>CE + PFA Capacity Arbitrage v20</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -19,6 +19,12 @@
   .action-btn:hover { background: #2563eb; border-color: #1d4ed8; }
   .danger-btn { background: transparent; border: 1px solid #ef4444; color: #ef4444; font-weight: 600; cursor: pointer; padding: 8px 12px; border-radius: 6px; }
   .danger-btn:hover { background: #ef4444; color: #ffffff; }
+
+  .mode-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .mode-bar { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid #2d3548; }
+  .mode-btn { padding: 7px 16px; background: #1e2330; color: #94a3b8; font-size: 12px; cursor: pointer; border: none; transition: all 0.15s; }
+  .mode-btn.active-current { background: #1e3a5f; color: #93c5fd; font-weight: 700; }
+  .mode-btn.active-future  { background: #14532d; color: #86efac; font-weight: 700; }
 
   .grid { display: grid; grid-template-columns: 340px 1fr; gap: 16px; }
   .panel { background: #1e2330; border-radius: 10px; padding: 16px; border: 1px solid #2d3548; }
@@ -125,7 +131,7 @@
 </head>
 <body>
 
-<h1>CE + PFA Capacity Arbitrage v19</h1>
+<h1>CE + PFA Capacity Arbitrage v20</h1>
 <p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment (Integrated Bypass Engine)</p>
 
 <div class="month-bar">
@@ -326,7 +332,7 @@ function savePreset() {
   if (!name) return;
   
   const presetData = {
-    savedMonth: selMonth, // Capture the active month
+    savedMonth: selMonth, // Capture the active month securely
     inputs: {},
     arrays: {
       PROJ_APPS_BASE: [...PROJ_APPS_BASE],
@@ -380,8 +386,8 @@ function loadPreset() {
     localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
   }
   
-  // Jump back to the month that was active when this preset was saved
-  const targetMonth = data.savedMonth !== undefined ? data.savedMonth : selMonth;
+  // Jump back to the exact month that was active when this preset was saved (Parse strictly)
+  const targetMonth = data.savedMonth !== undefined ? parseInt(data.savedMonth, 10) : selMonth;
   setMonth(targetMonth); 
 }
 
@@ -451,7 +457,8 @@ function syncToArrays() {
 // ── APP LOGIC ──
 function setMonth(i) { 
   selMonth = i; 
-  document.querySelectorAll('.month-btn').forEach((b, idx) => b.classList.toggle('active', idx === i)); 
+  // Strictly target only the month bar tabs so other buttons don't throw off the index
+  document.querySelectorAll('.month-bar .month-btn').forEach((b, idx) => b.classList.toggle('active', idx === i)); 
   
   document.getElementById('apps-base-input').value = PROJ_APPS_BASE[i]; 
   document.getElementById('enroll-target').value = ENROLL_TGTS[i]; 

@@ -15,18 +15,16 @@
   .month-btn { padding: 5px 11px; border-radius: 6px; border: 1px solid #2d3548; background: #1e2330; color: #94a3b8; font-size: 12px; cursor: pointer; transition: all 0.15s; }
   .month-btn.active { background: #312e81; border-color: #6366f1; color: #e0e7ff; font-weight: 600; }
   
-  .action-btn { background: #3b82f6; border-color: #2563eb; color: #ffffff; font-weight: 600; cursor: pointer; padding: 8px 12px; border-radius: 6px; border-style: solid; border-width: 1px; }
+  .action-btn { background: #3b82f6; border-color: #2563eb; color: #ffffff; font-weight: 600; cursor: pointer; padding: 8px 12px; border-radius: 6px; border-style: solid; border-width: 1px; transition: all 0.15s; }
   .action-btn:hover { background: #2563eb; border-color: #1d4ed8; }
-  .danger-btn { background: transparent; border: 1px solid #ef4444; color: #ef4444; font-weight: 600; cursor: pointer; padding: 8px 12px; border-radius: 6px; }
+  
+  .load-btn { padding: 6px 12px; margin: 0; background: #1e2330; border: 1px solid #2d3548; color: #cbd5e1; font-size: 12px; cursor: pointer; transition: all 0.15s; border-radius: 6px; font-weight: 600; }
+  .load-btn:hover { background: #312e81; border-color: #6366f1; color: #ffffff; }
+
+  .danger-btn { background: transparent; border: 1px solid #ef4444; color: #ef4444; font-weight: 600; cursor: pointer; padding: 8px 12px; border-radius: 6px; transition: all 0.15s; }
   .danger-btn:hover { background: #ef4444; color: #ffffff; }
 
-  .mode-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-  .mode-bar { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid #2d3548; }
-  .mode-btn { padding: 7px 16px; background: #1e2330; color: #94a3b8; font-size: 12px; cursor: pointer; border: none; transition: all 0.15s; }
-  .mode-btn.active-current { background: #1e3a5f; color: #93c5fd; font-weight: 700; }
-  .mode-btn.active-future  { background: #14532d; color: #86efac; font-weight: 700; }
-
-  .grid { display: grid; grid-template-columns: 340px 1fr; gap: 16px; }
+  .grid { display: grid; grid-template-columns: 380px 1fr; gap: 16px; }
   .panel { background: #1e2330; border-radius: 10px; padding: 16px; border: 1px solid #2d3548; }
   .panel h2 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 12px; }
 
@@ -90,8 +88,8 @@
   .bar-pfa { background: #10b981; }
 
   .narrative-box { background: #1e2330; border-left: 4px solid #6366f1; padding: 14px; border-radius: 6px; margin-top: 14px; border: 1px solid #3d4a63; border-left-width: 4px; }
-  .narrative-box h3 { font-size: 11px; text-transform: uppercase; color: #a5b4fc; margin-bottom: 8px; }
-  .narrative-box p { font-size: 13px; line-height: 1.6; color: #cbd5e1; margin-bottom: 8px; }
+  .narrative-box h3 { font-size: 11px; text-transform: uppercase; color: #a5b4fc; margin-bottom: 12px; }
+  .narrative-box p { font-size: 13px; line-height: 1.6; color: #cbd5e1; margin-bottom: 10px; }
   .narrative-box p:last-child { margin-bottom: 0; }
   .narrative-box strong { color: #f8fafc; }
 
@@ -155,7 +153,7 @@
       <select id="preset-select" style="flex: 1; min-width: 130px; background: #0f1117; color: #f1f5f9; border: 1px solid #3d4a63; border-radius: 6px; padding: 6px; font-size: 12px; outline: none;"></select>
       <div style="display: flex; gap: 6px; align-items: center;">
         <button class="action-btn" onclick="savePreset()" style="padding: 6px 12px;" title="Save current parameters as a new preset">Save</button>
-        <button class="month-btn" onclick="loadPreset()" style="padding: 6px 12px; margin: 0; background: #1e2330; border: 1px solid #2d3548; color: #cbd5e1;" title="Load selected preset">Load</button>
+        <button class="load-btn" onclick="loadPreset()" title="Load selected preset">Load</button>
         <button class="danger-btn" onclick="deletePreset()" style="padding: 6px 12px;" title="Delete selected preset">Delete</button>
       </div>
     </div>
@@ -332,7 +330,7 @@ function savePreset() {
   if (!name) return;
   
   const presetData = {
-    savedMonth: selMonth, // Capture the active month securely
+    savedMonth: parseInt(selMonth, 10), // Capture the active month securely
     inputs: {},
     arrays: {
       PROJ_APPS_BASE: [...PROJ_APPS_BASE],
@@ -386,7 +384,7 @@ function loadPreset() {
     localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
   }
   
-  // Jump back to the exact month that was active when this preset was saved (Parse strictly)
+  // Jump back to the exact month that was active when this preset was saved
   const targetMonth = data.savedMonth !== undefined ? parseInt(data.savedMonth, 10) : selMonth;
   setMonth(targetMonth); 
 }
@@ -500,7 +498,7 @@ function calculateMetrics(mIdx) {
     const pfaApps = apps * (rv('pfaPct')/100);
     const stdApps = apps - pfaApps;
 
-    // Unified Demand Calcs
+    // Demand Calcs
     const cePsDemand = stdApps * psSchedRate;
     const pfaPsDemand = pfaApps * psSchedRate; 
     const systemPsDemand = cePsDemand + pfaPsDemand;
@@ -535,12 +533,26 @@ function calculateMetrics(mIdx) {
 
     const evalComp = rv('evalComp')/100;
     const enrollRate = rv('enrollRate')/100;
-    const maxYield = ceEvCap * evalComp * enrollRate;
+    
+    // END-TO-END CONSTRAINED YIELD MATH
+    const ceEvalsFed = Math.min(cePsDemand, cePsCap) * psToEvalConv;
+    const pfaProcessedRatio = pfaPsDemand > 0 ? Math.min(1, pfaPsCap / pfaPsDemand) : 1;
+    const pfaEvalsFed = (pfaApps * pfaProcessedRatio) * pfaBypassConv;
+    const totalEvalsFed = ceEvalsFed + pfaEvalsFed;
+    
+    const achievableEvals = Math.min(totalEvalsFed, ceEvCap);
+    const trueMaxYield = achievableEvals * evalComp * enrollRate;
+
     const actualEnrolled = ceEvalDemand * evalComp * enrollRate;
     const actualPsComp = systemPsDemand * (rv('psComp')/100);
     const actualEvComp = ceEvalDemand * evalComp;
 
-    return { apps, systemPsDemand, ceEvalDemand, cePsCap, ceEvCap, pfaPsCap, systemPsCap, reqCEs, reqPFAs, pfaApps, maxYield, actualEnrolled, actualPsComp, actualEvComp, tgt };
+    return { 
+      apps, systemPsDemand, pfaPsDemand, ceEvalDemand, cePsCap, ceEvCap, 
+      pfaPsCap, systemPsCap, reqCEs, reqPFAs, pfaApps, 
+      maxYield: trueMaxYield, 
+      actualEnrolled, actualPsComp, actualEvComp, tgt, totalEvalsFed 
+    };
   } catch (e) {
     console.error(e); return { reqCEs: 0, systemPsDemand: 0, ceEvalDemand: 0 };
   }
@@ -632,29 +644,29 @@ function sync() {
   // Dynamic Narrative Generation
   let narrative = `<h3>Monthly Executive Insight</h3>`;
 
+  narrative += `<p><strong>1. Target & Bottleneck Analysis:</strong> Our end-to-end capacity yield is <strong>${fmt(m.maxYield)} enrollments</strong> against a target of ${fmt(m.tgt)}. `;
   if (m.maxYield >= m.tgt) {
-    narrative += `<p><strong>✅ Target Achievable:</strong> Based on current routing and capacity, the system is positioned to theoretically yield <strong>${fmt(m.maxYield)} enrollments</strong>, exceeding the monthly target of ${fmt(m.tgt)}.</p>`;
+    narrative += `<span style="color:#22c55e;">This indicates our funnel is fully optimized and staffed to clear the required pipeline.</span></p>`;
   } else {
-    narrative += `<p><strong>⚠️ Target at Risk:</strong> The system's maximum theoretical yield is <strong>${fmt(m.maxYield)} enrollments</strong>, falling short of the ${fmt(m.tgt)} target by ${fmt(m.tgt - m.maxYield)}. To close this gap, we must either increase top-of-funnel volume or improve mid-funnel conversion rates.</p>`;
+    let bottleneck = (m.totalEvalsFed < m.ceEvalDemand) ? "Phone Screen" : "Clinical Evaluation";
+    if (m.totalEvalsFed < m.ceEvalDemand && m.ceEvCap < m.ceEvalDemand) bottleneck = "Phone Screen and Clinical Evaluation";
+    narrative += `<span style="color:#ef4444;">We are projecting a shortfall of ${fmt(m.tgt - m.maxYield)} enrollments. This system is primarily constrained by <strong>${bottleneck}</strong> capacity, meaning pipeline flow will stall.</span></p>`;
   }
 
+  narrative += `<p><strong>2. PFA Arbitrage Strategy:</strong> By diverting ${rv('pfaPct')}% of volume to PFAs, we are shielding CEs from <strong>${fmt(m.pfaPsDemand)} phone screens</strong>. `;
+  if (pfaDeficit > 0.1) {
+    narrative += `However, we are short <strong>${pfaDeficit.toFixed(1)} PFAs</strong>. The current PFA team can only process ${fmt(m.pfaPsCap)} screens, creating a top-of-funnel choke point.</p>`;
+  } else {
+    narrative += `The PFA team is adequately staffed to absorb this volume without bottlenecking.</p>`;
+  }
+
+  narrative += `<p><strong>3. CE Clinical Staffing:</strong> `;
   if (ceDeficit > 0.1) {
-    narrative += `<p><strong>CE Staffing:</strong> We are currently understaffed by roughly <strong>${ceDeficit.toFixed(1)} CEs</strong>. To handle the projected demand of ${fmt(m.ceEvalDemand)} clinical evaluations without overwhelming the team, we must increase headcount or shift more top-of-funnel volume to PFAs.</p>`;
+    narrative += `Even with PFA diversion, we remain short <strong>${ceDeficit.toFixed(1)} CEs</strong> to handle the downstream demand of ${fmt(m.ceEvalDemand)} evaluations. We must increase CE headcount or face severe scheduling delays.</p>`;
   } else if (ceDeficit < -0.1) {
-    narrative += `<p><strong>CE Staffing:</strong> We have a healthy surplus of CE capacity (approx. ${Math.abs(ceDeficit).toFixed(1)} CEs). The team is well-staffed to clear the clinical queue.</p>`;
+    narrative += `CEs have a healthy capacity surplus and are well-staffed to clear the evaluation queue.</p>`;
   } else {
-    narrative += `<p><strong>CE Staffing:</strong> CE headcount is perfectly balanced with incoming clinical demand.</p>`;
-  }
-
-  if (m.pfaApps > 0) {
-      narrative += `<p><strong>PFA Arbitrage Strategy:</strong> By diverting ${rv('pfaPct')}% of volume to the PFA bypass pathway, we are shifting <strong>${fmt(m.pfaPsDemand)} phone screens</strong> away from CEs. `;
-      if (pfaDeficit > 0.1) {
-          narrative += `However, we are currently short <strong>${pfaDeficit.toFixed(1)} PFAs</strong> to process this routed volume. The current PFA team can only process ${fmt(m.pfaPsCap)} screens.</p>`;
-      } else {
-          narrative += `Our PFA team is appropriately staffed to absorb this routed volume.</p>`;
-      }
-  } else {
-      narrative += `<p><strong>PFA Arbitrage Strategy:</strong> Currently, 0% of volume is diverted to PFAs. Increasing PFA diversion could free up CE capacity for more clinical evaluations if a bottleneck occurs.</p>`;
+    narrative += `CE headcount is perfectly balanced with incoming clinical demand.</p>`;
   }
 
   document.getElementById('narrative-output').innerHTML = narrative;

@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CE + PFA Capacity Arbitrage v18</title>
+<title>CE + PFA Capacity Arbitrage v19</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -125,7 +125,7 @@
 </head>
 <body>
 
-<h1>CE + PFA Capacity Arbitrage v18</h1>
+<h1>CE + PFA Capacity Arbitrage v19</h1>
 <p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment (Integrated Bypass Engine)</p>
 
 <div class="month-bar">
@@ -326,6 +326,7 @@ function savePreset() {
   if (!name) return;
   
   const presetData = {
+    savedMonth: selMonth, // Capture the active month
     inputs: {},
     arrays: {
       PROJ_APPS_BASE: [...PROJ_APPS_BASE],
@@ -379,7 +380,9 @@ function loadPreset() {
     localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
   }
   
-  setMonth(selMonth); 
+  // Jump back to the month that was active when this preset was saved
+  const targetMonth = data.savedMonth !== undefined ? data.savedMonth : selMonth;
+  setMonth(targetMonth); 
 }
 
 function deletePreset() {

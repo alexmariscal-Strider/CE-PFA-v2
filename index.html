@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CE + PFA Capacity Arbitrage v20</title>
+<title>CE + PFA Capacity Arbitrage v21</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -129,7 +129,7 @@
 </head>
 <body>
 
-<h1>CE + PFA Capacity Arbitrage v20</h1>
+<h1>CE + PFA Capacity Arbitrage v21</h1>
 <p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment (Integrated Bypass Engine)</p>
 
 <div class="month-bar">
@@ -176,6 +176,9 @@
     <div class="input-row"><label>Lead CE Daily (PS/Ev)</label><div class="quota-row"><input type="number" id="leadCePsQuota" value="3"><input type="number" id="leadCeEvalQuota" value="3"></div></div>
     <div class="input-row"><label>PFA Daily PS Quota <span title="Phone screens per PFA per day" style="cursor:help;">ⓘ</span></label><div class="quota-row"><input type="number" id="pfaDailyQuota" value="10"></div></div>
 
+    <div class="section-label" style="color:#22c55e;">PFA Capacity Arbitrage</div>
+    <div class="input-row"><label>PSs Diverted to PFA % <span title="Percentage of total volume routed to the PFA workflow." style="cursor:help;">ⓘ</span></label><input type="range" id="pfaPct" min="0" max="100" value="37"><span class="val-badge" id="pfaPct-v">37%</span></div>
+
     <div class="section-label">Efficiency & Handle Time</div>
     <div class="input-row"><label>PS Handle Time (mins)</label><input type="range" id="psAht" min="15" max="60" value="30" step="5"><span class="val-badge" id="psAht-v">30m</span></div>
     <div class="input-row"><label>Eval Handle Time (mins)</label><input type="range" id="evalAht" min="30" max="120" value="60" step="5"><span class="val-badge" id="evalAht-v">60m</span></div>
@@ -189,9 +192,6 @@
 
     <div class="input-row"><label>CE Shrinkage (%)</label><input type="range" id="shrinkage" min="0" max="25" value="2"><span class="val-badge" id="shrinkage-v">2%</span></div>
     <div class="input-row"><label>PFA Shrinkage (%)</label><input type="range" id="pfaShrinkage" min="0" max="25" value="5"><span class="val-badge" id="pfaShrinkage-v">5%</span></div>
-
-    <div class="section-label" style="color:#22c55e;">PFA Capacity Arbitrage</div>
-    <div class="input-row"><label>PSs Diverted to PFA % <span title="Percentage of total volume routed to the PFA workflow." style="cursor:help;">ⓘ</span></label><input type="range" id="pfaPct" min="0" max="100" value="37"><span class="val-badge" id="pfaPct-v">37%</span></div>
 
     <div class="section-label">Funnel Rates</div>
     <div class="input-row"><label>PS Completion %</label><input type="range" id="psComp" value="74"><span class="val-badge" id="psComp-v">74%</span></div>
@@ -384,7 +384,7 @@ function loadPreset() {
     localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
   }
   
-  // Jump back to the exact month that was active when this preset was saved
+  // Jump back to the exact month that was active when this preset was saved (Parse strictly)
   const targetMonth = data.savedMonth !== undefined ? parseInt(data.savedMonth, 10) : selMonth;
   setMonth(targetMonth); 
 }
@@ -498,7 +498,7 @@ function calculateMetrics(mIdx) {
     const pfaApps = apps * (rv('pfaPct')/100);
     const stdApps = apps - pfaApps;
 
-    // Demand Calcs
+    // Unified Demand Calcs
     const cePsDemand = stdApps * psSchedRate;
     const pfaPsDemand = pfaApps * psSchedRate; 
     const systemPsDemand = cePsDemand + pfaPsDemand;
@@ -589,11 +589,11 @@ function sync() {
 
   const curCEs = rv('stdCEs') + rv('leadCEs');
   const ceDeficit = m.reqCEs - curCEs;
-  const ceStaffStr = ceDeficit > 0.1 ? `<span style="color:#ef4444;">+${ceDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`;
+  const ceStaffStr = ceDeficit > 0.5 ? `<span style="color:#ef4444;">+${ceDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`;
 
   const curPFAs = rv('pfaHeadcount');
   const pfaDeficit = m.reqPFAs - curPFAs;
-  const pfaStaffStr = pfaDeficit > 0.1 ? `<span style="color:#ef4444;">+${pfaDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`;
+  const pfaStaffStr = pfaDeficit > 0.5 ? `<span style="color:#ef4444;">+${pfaDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`;
 
   document.getElementById('metrics-output').innerHTML = `
     <div class="stat-card">
@@ -654,16 +654,16 @@ function sync() {
   }
 
   narrative += `<p><strong>2. PFA Arbitrage Strategy:</strong> By diverting ${rv('pfaPct')}% of volume to PFAs, we are shielding CEs from <strong>${fmt(m.pfaPsDemand)} phone screens</strong>. `;
-  if (pfaDeficit > 0.1) {
+  if (pfaDeficit > 0.5) {
     narrative += `However, we are short <strong>${pfaDeficit.toFixed(1)} PFAs</strong>. The current PFA team can only process ${fmt(m.pfaPsCap)} screens, creating a top-of-funnel choke point.</p>`;
   } else {
     narrative += `The PFA team is adequately staffed to absorb this volume without bottlenecking.</p>`;
   }
 
   narrative += `<p><strong>3. CE Clinical Staffing:</strong> `;
-  if (ceDeficit > 0.1) {
+  if (ceDeficit > 0.5) {
     narrative += `Even with PFA diversion, we remain short <strong>${ceDeficit.toFixed(1)} CEs</strong> to handle the downstream demand of ${fmt(m.ceEvalDemand)} evaluations. We must increase CE headcount or face severe scheduling delays.</p>`;
-  } else if (ceDeficit < -0.1) {
+  } else if (ceDeficit < -0.5) {
     narrative += `CEs have a healthy capacity surplus and are well-staffed to clear the evaluation queue.</p>`;
   } else {
     narrative += `CE headcount is perfectly balanced with incoming clinical demand.</p>`;

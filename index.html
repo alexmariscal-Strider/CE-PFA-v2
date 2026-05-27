@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CE + PFA Capacity Arbitrage v25</title>
+<title>CE + PFA Capacity Arbitrage v26</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -129,7 +129,7 @@
 </head>
 <body>
 
-<h1>CE + PFA Capacity Arbitrage v25</h1>
+<h1>CE + PFA Capacity Arbitrage v26</h1>
 <p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment (Integrated Bypass Engine)</p>
 
 <div class="month-bar">
@@ -152,9 +152,9 @@
     <div class="input-row" style="margin-bottom: 16px; align-items: stretch;">
       <select id="preset-select" style="flex: 1; min-width: 130px; background: #0f1117; color: #f1f5f9; border: 1px solid #3d4a63; border-radius: 6px; padding: 6px; font-size: 12px; outline: none;"></select>
       <div style="display: flex; gap: 6px; align-items: center;">
-        <button class="action-btn" onclick="savePreset()" style="padding: 6px 12px;" title="Save current parameters as a new preset">Save</button>
-        <button class="load-btn" onclick="loadPreset()" title="Load selected preset">Load</button>
-        <button class="danger-btn" onclick="deletePreset()" style="padding: 6px 12px;" title="Delete selected preset">Delete</button>
+        <button class="action-btn" onclick="savePreset()" style="padding: 6px 12px;">Save</button>
+        <button class="load-btn" onclick="loadPreset()">Load</button>
+        <button class="danger-btn" onclick="deletePreset()" style="padding: 6px 12px;">Delete</button>
       </div>
     </div>
 
@@ -174,10 +174,10 @@
     <div class="section-label">Clinical Scheduling Quotas</div>
     <div class="input-row"><label>Std CE Daily (PS/Ev)</label><div class="quota-row"><input type="number" id="stdCePsQuota" value="4"><input type="number" id="stdCeEvalQuota" value="3"></div></div>
     <div class="input-row"><label>Lead CE Daily (PS/Ev)</label><div class="quota-row"><input type="number" id="leadCePsQuota" value="3"><input type="number" id="leadCeEvalQuota" value="3"></div></div>
-    <div class="input-row"><label>PFA Daily PS Quota <span title="Phone screens per PFA per day" style="cursor:help;">ⓘ</span></label><div class="quota-row"><input type="number" id="pfaDailyQuota" value="10"></div></div>
+    <div class="input-row"><label>PFA Daily PS Quota</label><div class="quota-row"><input type="number" id="pfaDailyQuota" value="10"></div></div>
 
     <div class="section-label" style="color:#22c55e;">PFA Capacity Arbitrage</div>
-    <div class="input-row"><label>PSs Diverted to PFA % <span title="Percentage of total volume routed to the PFA workflow." style="cursor:help;">ⓘ</span></label><input type="range" id="pfaPct" min="0" max="100" value="37"><span class="val-badge" id="pfaPct-v">37%</span></div>
+    <div class="input-row"><label>PSs Diverted to PFA %</label><input type="range" id="pfaPct" min="0" max="100" value="37"><span class="val-badge" id="pfaPct-v">37%</span></div>
 
     <div class="section-label">Efficiency & Handle Time</div>
     <div class="input-row"><label>PS Handle Time (mins)</label><input type="range" id="psAht" min="15" max="60" value="30" step="5"><span class="val-badge" id="psAht-v">30m</span></div>
@@ -211,7 +211,7 @@
       <h2>Enrollment Target Assurance</h2>
       <div class="target-banner" id="target-banner"></div>
       
-      <h2>Headcount Forecast (May - Dec) <span title="Calculates Required Headcount based on individual month forecasts." style="cursor:help; font-size:11px; color:#a5b4fc;">ⓘ</span></h2>
+      <h2>Headcount Forecast (May - Dec) <span style="font-size:10px;color:#64748b;font-weight:400;margin-left:4px;">· Required vs Actual tracking for the remainder of the year.</span></h2>
       <div class="chart-container"><canvas id="headcountChart"></canvas></div>
 
       <h2>Weekly Run Rate vs. Manual Targets <span style="font-size:10px;color:#64748b;font-weight:400;">· Enter custom targets to track pacing</span></h2>
@@ -384,7 +384,6 @@ function loadPreset() {
     localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
   }
   
-  // Jump back to the exact month that was active when this preset was saved (Parse strictly)
   const targetMonth = data.savedMonth !== undefined ? parseInt(data.savedMonth, 10) : selMonth;
   setMonth(targetMonth); 
 }
@@ -609,15 +608,16 @@ function sync() {
       <div class="stat-sub">CE Eval Cap: ${fmt(m.ceEvCap)} · ${evHeadStr}</div>
     </div>
     <div class="stat-card hl">
-      <div class="stat-label" title="Time-Based Math: ((PS Demand × PS AHT) + (Eval Demand × Eval AHT)) ÷ CE Prod. Minutes. WFM PARADOX: If this shows you have enough CEs, but you still have a shortfall, your daily quotas are artificially restricting throughput. You don't need more people; you need to adjust their daily quotas to match the demand shape." style="cursor:help;">Required CE Headcount <span style="color:#a5b4fc; margin-left:4px;">ⓘ</span></div>
+      <div class="stat-label">Required CE Headcount</div>
       <div class="stat-value">${m.reqCEs.toFixed(1)}</div>
       <div class="stat-sub">
         Current: ${curCEs} · ${ceStaffStr}<br>
-        <span style="font-size:9px; color:#64748b; margin-top:4px; display:block;">Assumes fluid scheduling. Constrained by daily quotas.</span>
+        <span style="font-size:9px; color:#64748b; margin-top:4px; display:block;">Math: ((PS Demand × PS AHT) + (Eval Demand × Eval AHT)) ÷ CE Prod. Minutes</span>
+        <span style="font-size:9px; color:#64748b; margin-top:2px; display:block;">Note: Assumes staff flexibly share their time. Rigid daily quotas may still cause bottlenecks.</span>
       </div>
     </div>
     <div class="stat-card hl" style="border-color:#10b981; background:#0f2a1a;">
-      <div class="stat-label" title="Calculated via strict quota math: (PFA PS Demand) ÷ (Daily Quota × Net Working Days × PFA Shrinkage)." style="color:#86efac; cursor:help;">Required PFA Headcount <span style="color:#86efac; margin-left:4px;">ⓘ</span></div>
+      <div class="stat-label" style="color:#86efac;">Required PFA Headcount</div>
       <div class="stat-value">${m.reqPFAs.toFixed(1)}</div>
       <div class="stat-sub" style="color:#86efac;">
         Current: ${curPFAs} · Cap: ${fmt(m.pfaPsCap)} PSs · ${pfaStaffStr}<br>
@@ -726,20 +726,7 @@ function updateChart() {
       responsive: true, maintainAspectRatio: false, 
       interaction: { mode: 'index', intersect: false },
       plugins: { 
-        legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8' } },
-        tooltip: {
-          backgroundColor: 'rgba(15, 17, 23, 0.9)',
-          titleColor: '#f1f5f9',
-          bodyColor: '#cbd5e1',
-          borderColor: '#3d4a63',
-          borderWidth: 1,
-          padding: 10,
-          callbacks: {
-            label: function(context) {
-              return context.dataset.label + ': ' + context.parsed.y.toFixed(1);
-            }
-          }
-        }
+        legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8' } }
       },
       scales: { 
         y: { beginAtZero: false, grid: { color: '#2d3548' }, ticks: { color: '#94a3b8' } },

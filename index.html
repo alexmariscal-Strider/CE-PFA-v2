@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CE + PFA Capacity Arbitrage v22</title>
+<title>CE + PFA Capacity Arbitrage v23</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -129,7 +129,7 @@
 </head>
 <body>
 
-<h1>CE + PFA Capacity Arbitrage v22</h1>
+<h1>CE + PFA Capacity Arbitrage v23</h1>
 <p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment (Integrated Bypass Engine)</p>
 
 <div class="month-bar">
@@ -174,7 +174,7 @@
     <div class="section-label">Clinical Scheduling Quotas</div>
     <div class="input-row"><label>Std CE Daily (PS/Ev)</label><div class="quota-row"><input type="number" id="stdCePsQuota" value="4"><input type="number" id="stdCeEvalQuota" value="3"></div></div>
     <div class="input-row"><label>Lead CE Daily (PS/Ev)</label><div class="quota-row"><input type="number" id="leadCePsQuota" value="3"><input type="number" id="leadCeEvalQuota" value="3"></div></div>
-    <div class="input-row"><label title="Phone screens per PFA per day" style="cursor:help;">PFA Daily PS Quota <span style="color:#a5b4fc; font-size:10px;">ⓘ</span></label><div class="quota-row"><input type="number" id="pfaDailyQuota" value="10"></div></div>
+    <div class="input-row"><label>PFA Daily PS Quota</label><div class="quota-row"><input type="number" id="pfaDailyQuota" value="10"></div></div>
 
     <div class="section-label">Efficiency & Handle Time</div>
     <div class="input-row"><label>PS Handle Time (mins)</label><input type="range" id="psAht" min="15" max="60" value="30" step="5"><span class="val-badge" id="psAht-v">30m</span></div>
@@ -191,7 +191,7 @@
     <div class="input-row"><label>PFA Shrinkage (%)</label><input type="range" id="pfaShrinkage" min="0" max="25" value="5"><span class="val-badge" id="pfaShrinkage-v">5%</span></div>
 
     <div class="section-label" style="color:#22c55e;">PFA Capacity Arbitrage</div>
-    <div class="input-row"><label title="Percentage of total volume routed to the PFA workflow." style="cursor:help;">PSs Diverted to PFA % <span style="color:#a5b4fc; font-size:10px;">ⓘ</span></label><input type="range" id="pfaPct" min="0" max="100" value="37"><span class="val-badge" id="pfaPct-v">37%</span></div>
+    <div class="input-row"><label>PSs Diverted to PFA %</label><input type="range" id="pfaPct" min="0" max="100" value="37"><span class="val-badge" id="pfaPct-v">37%</span></div>
 
     <div class="section-label">Funnel Rates</div>
     <div class="input-row"><label>PS Completion %</label><input type="range" id="psComp" value="74"><span class="val-badge" id="psComp-v">74%</span></div>
@@ -211,7 +211,7 @@
       <h2>Enrollment Target Assurance</h2>
       <div class="target-banner" id="target-banner"></div>
       
-      <h2 title="Calculates Required Headcount based on individual month forecasts." style="cursor:help; display:inline-block;">Headcount Forecast (May - Dec) <span style="color:#a5b4fc; font-size:11px; margin-left:4px;">ⓘ</span></h2>
+      <h2>Headcount Forecast (May - Dec) <span style="font-size:10px;color:#64748b;font-weight:400;margin-left:4px;">· Required vs Actual tracking for the remainder of the year.</span></h2>
       <div class="chart-container"><canvas id="headcountChart"></canvas></div>
 
       <h2>Weekly Run Rate vs. Manual Targets <span style="font-size:10px;color:#64748b;font-weight:400;">· Enter custom targets to track pacing</span></h2>
@@ -330,7 +330,7 @@ function savePreset() {
   if (!name) return;
   
   const presetData = {
-    savedMonth: parseInt(selMonth, 10),
+    savedMonth: parseInt(selMonth, 10), // Capture the active month securely
     inputs: {},
     arrays: {
       PROJ_APPS_BASE: [...PROJ_APPS_BASE],
@@ -607,14 +607,20 @@ function sync() {
       <div class="stat-sub">CE Eval Cap: ${fmt(m.ceEvCap)} · ${evHeadStr}</div>
     </div>
     <div class="stat-card hl">
-      <div class="stat-label" title="Calculated via total clinical minutes needed: ((PS Demand × PS AHT) + (Eval Demand × Eval AHT)) ÷ (Productive Minutes per CE). This is pure time-based demand, independent of daily quotas." style="cursor:help;">Required CE Headcount <span style="color:#a5b4fc; margin-left:4px;">ⓘ</span></div>
+      <div class="stat-label">Required CE Headcount</div>
       <div class="stat-value">${m.reqCEs.toFixed(1)}</div>
-      <div class="stat-sub">Current: ${curCEs} · ${ceStaffStr}</div>
+      <div class="stat-sub">
+        Current: ${curCEs} · ${ceStaffStr}<br>
+        <span style="font-size:9px; color:#64748b; margin-top:4px; display:block;">Math: ((PS Demand × PS AHT) + (Eval Demand × Eval AHT)) ÷ CE Prod. Minutes</span>
+      </div>
     </div>
     <div class="stat-card hl" style="border-color:#10b981; background:#0f2a1a;">
-      <div class="stat-label" title="Calculated via strict quota math: (PFA PS Demand) ÷ (Daily Quota × Net Working Days × PFA Shrinkage)." style="color:#86efac; cursor:help;">Required PFA Headcount <span style="color:#86efac; margin-left:4px;">ⓘ</span></div>
+      <div class="stat-label" style="color:#86efac;">Required PFA Headcount</div>
       <div class="stat-value">${m.reqPFAs.toFixed(1)}</div>
-      <div class="stat-sub" style="color:#86efac;">Current: ${curPFAs} · Cap: ${fmt(m.pfaPsCap)} PSs · ${pfaStaffStr}</div>
+      <div class="stat-sub" style="color:#86efac;">
+        Current: ${curPFAs} · Cap: ${fmt(m.pfaPsCap)} PSs · ${pfaStaffStr}<br>
+        <span style="font-size:9px; color:#4ade80; margin-top:4px; display:block; opacity:0.8;">Math: PFA Demand ÷ (Daily Quota × Net Work Days × Shrinkage)</span>
+      </div>
     </div>
   `;
 

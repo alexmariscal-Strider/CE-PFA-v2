@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CE + PFA Capacity Arbitrage v23</title>
+<title>CE + PFA Capacity Arbitrage v24</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -129,7 +129,7 @@
 </head>
 <body>
 
-<h1>CE + PFA Capacity Arbitrage v23</h1>
+<h1>CE + PFA Capacity Arbitrage v24</h1>
 <p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment (Integrated Bypass Engine)</p>
 
 <div class="month-bar">
@@ -174,7 +174,10 @@
     <div class="section-label">Clinical Scheduling Quotas</div>
     <div class="input-row"><label>Std CE Daily (PS/Ev)</label><div class="quota-row"><input type="number" id="stdCePsQuota" value="4"><input type="number" id="stdCeEvalQuota" value="3"></div></div>
     <div class="input-row"><label>Lead CE Daily (PS/Ev)</label><div class="quota-row"><input type="number" id="leadCePsQuota" value="3"><input type="number" id="leadCeEvalQuota" value="3"></div></div>
-    <div class="input-row"><label>PFA Daily PS Quota</label><div class="quota-row"><input type="number" id="pfaDailyQuota" value="10"></div></div>
+    <div class="input-row"><label>PFA Daily PS Quota <span title="Phone screens per PFA per day" style="cursor:help;">ⓘ</span></label><div class="quota-row"><input type="number" id="pfaDailyQuota" value="10"></div></div>
+
+    <div class="section-label" style="color:#22c55e;">PFA Capacity Arbitrage</div>
+    <div class="input-row"><label title="Percentage of total volume routed to the PFA workflow." style="cursor:help;">PSs Diverted to PFA % <span style="color:#a5b4fc; font-size:10px;">ⓘ</span></label><input type="range" id="pfaPct" min="0" max="100" value="37"><span class="val-badge" id="pfaPct-v">37%</span></div>
 
     <div class="section-label">Efficiency & Handle Time</div>
     <div class="input-row"><label>PS Handle Time (mins)</label><input type="range" id="psAht" min="15" max="60" value="30" step="5"><span class="val-badge" id="psAht-v">30m</span></div>
@@ -189,9 +192,6 @@
 
     <div class="input-row"><label>CE Shrinkage (%)</label><input type="range" id="shrinkage" min="0" max="25" value="2"><span class="val-badge" id="shrinkage-v">2%</span></div>
     <div class="input-row"><label>PFA Shrinkage (%)</label><input type="range" id="pfaShrinkage" min="0" max="25" value="5"><span class="val-badge" id="pfaShrinkage-v">5%</span></div>
-
-    <div class="section-label" style="color:#22c55e;">PFA Capacity Arbitrage</div>
-    <div class="input-row"><label>PSs Diverted to PFA %</label><input type="range" id="pfaPct" min="0" max="100" value="37"><span class="val-badge" id="pfaPct-v">37%</span></div>
 
     <div class="section-label">Funnel Rates</div>
     <div class="input-row"><label>PS Completion %</label><input type="range" id="psComp" value="74"><span class="val-badge" id="psComp-v">74%</span></div>
@@ -211,7 +211,7 @@
       <h2>Enrollment Target Assurance</h2>
       <div class="target-banner" id="target-banner"></div>
       
-      <h2>Headcount Forecast (May - Dec) <span style="font-size:10px;color:#64748b;font-weight:400;margin-left:4px;">· Required vs Actual tracking for the remainder of the year.</span></h2>
+      <h2>Headcount Forecast (May - Dec) <span title="Calculates Required Headcount based on individual month forecasts." style="cursor:help; font-size:11px; color:#a5b4fc;">ⓘ</span></h2>
       <div class="chart-container"><canvas id="headcountChart"></canvas></div>
 
       <h2>Weekly Run Rate vs. Manual Targets <span style="font-size:10px;color:#64748b;font-weight:400;">· Enter custom targets to track pacing</span></h2>
@@ -384,6 +384,7 @@ function loadPreset() {
     localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
   }
   
+  // Jump back to the exact month that was active when this preset was saved (Parse strictly)
   const targetMonth = data.savedMonth !== undefined ? parseInt(data.savedMonth, 10) : selMonth;
   setMonth(targetMonth); 
 }
@@ -454,6 +455,7 @@ function syncToArrays() {
 // ── APP LOGIC ──
 function setMonth(i) { 
   selMonth = i; 
+  // Strictly target only the month bar tabs so other buttons don't throw off the index
   document.querySelectorAll('.month-bar .month-btn').forEach((b, idx) => b.classList.toggle('active', idx === i)); 
   
   document.getElementById('apps-base-input').value = PROJ_APPS_BASE[i]; 
@@ -587,11 +589,11 @@ function sync() {
 
   const curCEs = rv('stdCEs') + rv('leadCEs');
   const ceDeficit = m.reqCEs - curCEs;
-  const ceStaffStr = ceDeficit > 0.1 ? `<span style="color:#ef4444;">+${ceDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`;
+  const ceStaffStr = ceDeficit > 0.5 ? `<span style="color:#ef4444;">+${ceDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`;
 
   const curPFAs = rv('pfaHeadcount');
   const pfaDeficit = m.reqPFAs - curPFAs;
-  const pfaStaffStr = pfaDeficit > 0.1 ? `<span style="color:#ef4444;">+${pfaDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`;
+  const pfaStaffStr = pfaDeficit > 0.5 ? `<span style="color:#ef4444;">+${pfaDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`;
 
   document.getElementById('metrics-output').innerHTML = `
     <div class="stat-card">

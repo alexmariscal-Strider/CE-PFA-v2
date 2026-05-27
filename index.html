@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CE + PFA Capacity Arbitrage v21</title>
+<title>CE + PFA Capacity Arbitrage v22</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -129,7 +129,7 @@
 </head>
 <body>
 
-<h1>CE + PFA Capacity Arbitrage v21</h1>
+<h1>CE + PFA Capacity Arbitrage v22</h1>
 <p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment (Integrated Bypass Engine)</p>
 
 <div class="month-bar">
@@ -174,7 +174,7 @@
     <div class="section-label">Clinical Scheduling Quotas</div>
     <div class="input-row"><label>Std CE Daily (PS/Ev)</label><div class="quota-row"><input type="number" id="stdCePsQuota" value="4"><input type="number" id="stdCeEvalQuota" value="3"></div></div>
     <div class="input-row"><label>Lead CE Daily (PS/Ev)</label><div class="quota-row"><input type="number" id="leadCePsQuota" value="3"><input type="number" id="leadCeEvalQuota" value="3"></div></div>
-    <div class="input-row"><label>PFA Daily PS Quota <span title="Phone screens per PFA per day" style="cursor:help;">ⓘ</span></label><div class="quota-row"><input type="number" id="pfaDailyQuota" value="10"></div></div>
+    <div class="input-row"><label title="Phone screens per PFA per day" style="cursor:help;">PFA Daily PS Quota <span style="color:#a5b4fc; font-size:10px;">ⓘ</span></label><div class="quota-row"><input type="number" id="pfaDailyQuota" value="10"></div></div>
 
     <div class="section-label">Efficiency & Handle Time</div>
     <div class="input-row"><label>PS Handle Time (mins)</label><input type="range" id="psAht" min="15" max="60" value="30" step="5"><span class="val-badge" id="psAht-v">30m</span></div>
@@ -191,7 +191,7 @@
     <div class="input-row"><label>PFA Shrinkage (%)</label><input type="range" id="pfaShrinkage" min="0" max="25" value="5"><span class="val-badge" id="pfaShrinkage-v">5%</span></div>
 
     <div class="section-label" style="color:#22c55e;">PFA Capacity Arbitrage</div>
-    <div class="input-row"><label>PSs Diverted to PFA % <span title="Percentage of total volume routed to the PFA workflow." style="cursor:help;">ⓘ</span></label><input type="range" id="pfaPct" min="0" max="100" value="37"><span class="val-badge" id="pfaPct-v">37%</span></div>
+    <div class="input-row"><label title="Percentage of total volume routed to the PFA workflow." style="cursor:help;">PSs Diverted to PFA % <span style="color:#a5b4fc; font-size:10px;">ⓘ</span></label><input type="range" id="pfaPct" min="0" max="100" value="37"><span class="val-badge" id="pfaPct-v">37%</span></div>
 
     <div class="section-label">Funnel Rates</div>
     <div class="input-row"><label>PS Completion %</label><input type="range" id="psComp" value="74"><span class="val-badge" id="psComp-v">74%</span></div>
@@ -211,7 +211,7 @@
       <h2>Enrollment Target Assurance</h2>
       <div class="target-banner" id="target-banner"></div>
       
-      <h2>Headcount Forecast (May - Dec) <span title="Calculates Required Headcount based on individual month forecasts." style="cursor:help; font-size:11px; color:#a5b4fc;">ⓘ</span></h2>
+      <h2 title="Calculates Required Headcount based on individual month forecasts." style="cursor:help; display:inline-block;">Headcount Forecast (May - Dec) <span style="color:#a5b4fc; font-size:11px; margin-left:4px;">ⓘ</span></h2>
       <div class="chart-container"><canvas id="headcountChart"></canvas></div>
 
       <h2>Weekly Run Rate vs. Manual Targets <span style="font-size:10px;color:#64748b;font-weight:400;">· Enter custom targets to track pacing</span></h2>
@@ -587,11 +587,11 @@ function sync() {
 
   const curCEs = rv('stdCEs') + rv('leadCEs');
   const ceDeficit = m.reqCEs - curCEs;
-  const ceStaffStr = ceDeficit > 0.5 ? `<span style="color:#ef4444;">+${ceDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`;
+  const ceStaffStr = ceDeficit > 0.1 ? `<span style="color:#ef4444;">+${ceDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`;
 
   const curPFAs = rv('pfaHeadcount');
   const pfaDeficit = m.reqPFAs - curPFAs;
-  const pfaStaffStr = pfaDeficit > 0.5 ? `<span style="color:#ef4444;">+${pfaDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`;
+  const pfaStaffStr = pfaDeficit > 0.1 ? `<span style="color:#ef4444;">+${pfaDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`;
 
   document.getElementById('metrics-output').innerHTML = `
     <div class="stat-card">
@@ -607,12 +607,12 @@ function sync() {
       <div class="stat-sub">CE Eval Cap: ${fmt(m.ceEvCap)} · ${evHeadStr}</div>
     </div>
     <div class="stat-card hl">
-      <div class="stat-label">Required CE Headcount <span title="Calculated via total clinical minutes needed: ((PS Demand × PS AHT) + (Eval Demand × Eval AHT)) ÷ (Productive Minutes per CE). This is pure time-based demand, independent of daily quotas." style="cursor:help; font-size:11px; color:#a5b4fc; margin-left:4px;">ⓘ</span></div>
+      <div class="stat-label" title="Calculated via total clinical minutes needed: ((PS Demand × PS AHT) + (Eval Demand × Eval AHT)) ÷ (Productive Minutes per CE). This is pure time-based demand, independent of daily quotas." style="cursor:help;">Required CE Headcount <span style="color:#a5b4fc; margin-left:4px;">ⓘ</span></div>
       <div class="stat-value">${m.reqCEs.toFixed(1)}</div>
       <div class="stat-sub">Current: ${curCEs} · ${ceStaffStr}</div>
     </div>
     <div class="stat-card hl" style="border-color:#10b981; background:#0f2a1a;">
-      <div class="stat-label" style="color:#86efac;">Required PFA Headcount <span title="Calculated via strict quota math: (PFA PS Demand) ÷ (Daily Quota × Net Working Days × PFA Shrinkage)." style="cursor:help; font-size:11px; color:#86efac; margin-left:4px;">ⓘ</span></div>
+      <div class="stat-label" title="Calculated via strict quota math: (PFA PS Demand) ÷ (Daily Quota × Net Working Days × PFA Shrinkage)." style="color:#86efac; cursor:help;">Required PFA Headcount <span style="color:#86efac; margin-left:4px;">ⓘ</span></div>
       <div class="stat-value">${m.reqPFAs.toFixed(1)}</div>
       <div class="stat-sub" style="color:#86efac;">Current: ${curPFAs} · Cap: ${fmt(m.pfaPsCap)} PSs · ${pfaStaffStr}</div>
     </div>
@@ -642,29 +642,31 @@ function sync() {
   // Dynamic Narrative Generation
   let narrative = `<h3>Monthly Executive Insight</h3>`;
 
-  narrative += `<p><strong>1. Target & Bottleneck Analysis:</strong> Our end-to-end capacity yield is <strong>${fmt(m.maxYield)} enrollments</strong> against a target of ${fmt(m.tgt)}. `;
   if (m.maxYield >= m.tgt) {
-    narrative += `<span style="color:#22c55e;">This indicates our funnel is fully optimized and staffed to clear the required pipeline.</span></p>`;
+    narrative += `<p><strong>✅ Target Achievable:</strong> Based on current routing and capacity, the system is positioned to theoretically yield <strong>${fmt(m.maxYield)} enrollments</strong>, exceeding the monthly target of ${fmt(m.tgt)}.</p>`;
   } else {
     let bottleneck = (m.totalEvalsFed < m.ceEvalDemand) ? "Phone Screen" : "Clinical Evaluation";
     if (m.totalEvalsFed < m.ceEvalDemand && m.ceEvCap < m.ceEvalDemand) bottleneck = "Phone Screen and Clinical Evaluation";
-    narrative += `<span style="color:#ef4444;">We are projecting a shortfall of ${fmt(m.tgt - m.maxYield)} enrollments. This system is primarily constrained by <strong>${bottleneck}</strong> capacity, meaning pipeline flow will stall.</span></p>`;
+    narrative += `<p><strong>⚠️ Target at Risk:</strong> The system's maximum theoretical yield is <strong>${fmt(m.maxYield)} enrollments</strong>, falling short of the ${fmt(m.tgt)} target by ${fmt(m.tgt - m.maxYield)}. To close this gap, we must either increase top-of-funnel volume or improve mid-funnel conversion rates.</p>`;
   }
 
-  narrative += `<p><strong>2. PFA Arbitrage Strategy:</strong> By diverting ${rv('pfaPct')}% of volume to PFAs, we are shielding CEs from <strong>${fmt(m.pfaPsDemand)} phone screens</strong>. `;
-  if (pfaDeficit > 0.5) {
-    narrative += `However, we are short <strong>${pfaDeficit.toFixed(1)} PFAs</strong>. The current PFA team can only process ${fmt(m.pfaPsCap)} screens, creating a top-of-funnel choke point.</p>`;
+  if (ceDeficit > 0.1) {
+    narrative += `<p><strong>CE Staffing:</strong> We are currently understaffed by roughly <strong>${ceDeficit.toFixed(1)} CEs</strong>. To handle the projected demand of ${fmt(m.ceEvalDemand)} clinical evaluations without overwhelming the team, we must increase headcount or shift more top-of-funnel volume to PFAs.</p>`;
+  } else if (ceDeficit < -0.1) {
+    narrative += `<p><strong>CE Staffing:</strong> We have a healthy surplus of CE capacity (approx. ${Math.abs(ceDeficit).toFixed(1)} CEs). The team is well-staffed to clear the clinical queue.</p>`;
   } else {
-    narrative += `The PFA team is adequately staffed to absorb this volume without bottlenecking.</p>`;
+    narrative += `<p><strong>CE Staffing:</strong> CE headcount is perfectly balanced with incoming clinical demand.</p>`;
   }
 
-  narrative += `<p><strong>3. CE Clinical Staffing:</strong> `;
-  if (ceDeficit > 0.5) {
-    narrative += `Even with PFA diversion, we remain short <strong>${ceDeficit.toFixed(1)} CEs</strong> to handle the downstream demand of ${fmt(m.ceEvalDemand)} evaluations. We must increase CE headcount or face severe scheduling delays.</p>`;
-  } else if (ceDeficit < -0.5) {
-    narrative += `CEs have a healthy capacity surplus and are well-staffed to clear the evaluation queue.</p>`;
+  if (m.pfaApps > 0) {
+      narrative += `<p><strong>PFA Arbitrage Strategy:</strong> By diverting ${rv('pfaPct')}% of volume to the PFA bypass pathway, we are shifting <strong>${fmt(m.pfaPsDemand)} phone screens</strong> away from CEs. `;
+      if (pfaDeficit > 0.1) {
+          narrative += `However, we are currently short <strong>${pfaDeficit.toFixed(1)} PFAs</strong> to process this routed volume. The current PFA team can only process ${fmt(m.pfaPsCap)} screens.</p>`;
+      } else {
+          narrative += `Our PFA team is appropriately staffed to absorb this routed volume.</p>`;
+      }
   } else {
-    narrative += `CE headcount is perfectly balanced with incoming clinical demand.</p>`;
+      narrative += `<p><strong>PFA Arbitrage Strategy:</strong> Currently, 0% of volume is diverted to PFAs. Increasing PFA diversion could free up CE capacity for more clinical evaluations if a bottleneck occurs.</p>`;
   }
 
   document.getElementById('narrative-output').innerHTML = narrative;

@@ -34,8 +34,8 @@
   .input-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; flex-wrap: wrap; }
   .input-row label { color: #cbd5e1; font-size: 12px; flex: 1; line-height: 1.35; min-width: 120px; }
   .input-row input[type=range]  { width: 84px; accent-color: #6366f1; }
-  .input-row input[type=number] { width: 60px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 5px; color: #f1f5f9; padding: 4px; text-align: right; transition: border-color 0.2s; }
-  .input-row input[type=number]:focus { border-color: #6366f1; outline: none; }
+  .input-row input[type=number], .input-row input[type=text] { width: 60px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 5px; color: #f1f5f9; padding: 4px; text-align: right; transition: border-color 0.2s; }
+  .input-row input[type=number]:focus, .input-row input[type=text]:focus { border-color: #6366f1; outline: none; }
   .val-badge { min-width: 40px; text-align: right; font-size: 12px; color: #a5b4fc; font-weight: 600; }
   .ro-val    { min-width: 60px; text-align: right; font-size: 12px; font-weight: 600; color: #f1f5f9; background: #0f1117; border: 1px solid #2d3548; border-radius: 5px; padding: 4px 7px; }
   
@@ -99,16 +99,18 @@
 
   .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 17, 23, 0.85); z-index: 1000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
   .modal-overlay.open { display: flex; }
-  .modal-box { background: #1e2330; border: 1px solid #3d4a63; border-radius: 10px; width: 680px; max-width: 95%; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+  .modal-box { background: #1e2330; border: 1px solid #3d4a63; border-radius: 10px; width: 720px; max-width: 95%; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-height: 90vh; display: flex; flex-direction: column; }
   .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #2d3548; padding-bottom: 12px; }
   .modal-header h2 { font-size: 14px; font-weight: 700; color: #f8fafc; margin: 0; }
   .modal-close { background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; }
   .modal-close:hover { color: #ef4444; }
-  .modal-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; min-width: 500px; }
+  .modal-body { overflow-y: auto; margin-bottom: 16px; flex: 1; }
+  .modal-table { width: 100%; border-collapse: collapse; min-width: 550px; }
   .modal-table th { text-align: left; color: #64748b; font-size: 10px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid #2d3548; }
   .modal-table td { padding: 6px 8px; border-bottom: 1px solid #1a2030; }
   .modal-table input { width: 60px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 4px; color: #f1f5f9; padding: 4px; font-size: 12px; text-align: right; }
-  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
+  .modal-table input[type=text] { text-align: left; width: 75px; }
+  .modal-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #2d3548; padding-top: 12px; }
 
   .chart-container { height: 220px; margin-top: 10px; margin-bottom: 16px; width: 100%; position: relative; }
 
@@ -128,17 +130,8 @@
 <h1>CE + PFA Capacity Arbitrage v29</h1>
 <p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment (Integrated Bypass Engine)</p>
 
-<div class="month-bar">
-  <span class="month-bar-label">Month:</span>
-  <button class="month-btn active" onclick="setMonth(0)">May</button>
-  <button class="month-btn" onclick="setMonth(1)">Jun</button>
-  <button class="month-btn" onclick="setMonth(2)">Jul</button>
-  <button class="month-btn" onclick="setMonth(3)">Aug</button>
-  <button class="month-btn" onclick="setMonth(4)">Sep</button>
-  <button class="month-btn" onclick="setMonth(5)">Oct</button>
-  <button class="month-btn" onclick="setMonth(6)">Nov</button>
-  <button class="month-btn" onclick="setMonth(7)">Dec</button>
-</div>
+<div class="month-bar" id="month-bar-container">
+  </div>
 
 <div class="grid">
   <div class="panel">
@@ -202,7 +195,7 @@
     <div class="input-row"><label>Known PTO Days (CEs)</label><input type="number" id="ptoDays" onchange="syncToArrays()"></div>
     <div class="input-row"><label>Known PTO Days (PFAs)</label><input type="number" id="pfaPtoDays" onchange="syncToArrays()"></div>
     
-    <button class="action-btn" style="width: 100%; justify-content: center; margin: 10px 0; font-size: 11px;" onclick="openSettingsModal()">📅 Manage Annual Forecasts & Calendar</button>
+    <button class="action-btn" style="width: 100%; justify-content: center; margin: 10px 0; font-size: 11px;" onclick="openSettingsModal()">📅 Manage Month Forecasts & Calendar</button>
 
     <div class="input-row"><label>CE Shrinkage (%)</label><input type="range" id="shrinkage" min="0" max="25" value="2"><span class="val-badge" id="shrinkage-v">2%</span></div>
     <div class="input-row"><label>PFA Shrinkage (%)</label><input type="range" id="pfaShrinkage" min="0" max="25" value="5"><span class="val-badge" id="pfaShrinkage-v">5%</span></div>
@@ -219,7 +212,7 @@
     <div class="panel">
       <h2>Executive Staffing & Utilization</h2>
       <p style="font-size:10px; color:#64748b; margin-bottom:12px; line-height:1.4;">
-        <strong>Methodology:</strong> "Ideal Need" assumes CEs can flexibly share 100% of their total clinical time. "Strict Need" calculates the absolute number of bodies required to clear the bottleneck based purely on rigid daily quotas (The WFM Paradox).
+        <strong>Methodology:</strong> "Ideal Need" assumes CEs can flexibly share 100% of their total clinical time. "Strict Need" calculates the absolute number of bodies required to clear the bottleneck based purely on rigid daily quotas (The Suitcase Paradox).
       </p>
       <div class="results-grid" id="metrics-output"></div>
     </div>
@@ -228,7 +221,7 @@
       <h2>Enrollment Target Assurance</h2>
       <div class="target-banner" id="target-banner"></div>
       
-      <h2>Headcount Forecast (May - Dec)</h2>
+      <h2>Headcount Forecast Tracker</h2>
       <div class="chart-container"><canvas id="headcountChart"></canvas></div>
 
       <h2>Weekly Run Rate vs. Manual Targets <span style="font-size:10px;color:#64748b;font-weight:400;">· Enter custom targets to track pacing</span></h2>
@@ -288,25 +281,38 @@
 <div class="modal-overlay" id="ptoModal">
   <div class="modal-box">
     <div class="modal-header">
-      <h2>📅 Annual Master Forecast & Calendar</h2>
+      <h2>📅 Dynamic Month Manager</h2>
       <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
     </div>
-    <div class="table-responsive">
+    <div class="modal-body">
       <table class="modal-table">
-        <thead><tr><th>Month</th><th>Base Apps</th><th>Target Enroll</th><th>Work Days</th><th>CE PTO</th><th>PFA PTO</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Month Label</th>
+            <th>Base Apps</th>
+            <th>Target Enroll</th>
+            <th>Work Days</th>
+            <th>CE PTO</th>
+            <th>PFA PTO</th>
+            <th style="width:30px;"></th>
+          </tr>
+        </thead>
         <tbody id="modal-table-body"></tbody>
       </table>
     </div>
     <div class="modal-footer">
-      <button class="danger-btn" onclick="restoreDefaults()">Restore Defaults</button>
+      <div>
+        <button class="action-btn" onclick="addMonthRow()" style="background:#1e3a5f; border-color:#3b82f6;">+ Add Month</button>
+        <button class="danger-btn" onclick="restoreDefaults()" style="margin-left: 10px;">Restore Defaults</button>
+      </div>
       <button class="action-btn" onclick="saveSettingsModal()">Save Changes</button>
     </div>
   </div>
 </div>
 
 <script>
-// ── DEFAULTS & STORAGE ──
-const MONTHS = ['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// ── DEFAULTS & DYNAMIC STORAGE ──
+const DEFAULT_MONTHS = ['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const DEFAULT_APPS = [1367, 1036, 1039, 1108, 1340, 1425, 1367, 1322];
 const DEFAULT_TGTS = [528, 348, 349, 370, 403, 466, 528, 529];
 const DEFAULT_WD = [18, 21, 21, 21, 21, 21, 18, 22];
@@ -316,6 +322,7 @@ const DEFAULT_WK_TGTS = Array.from({length: 8}, () => ({psSched: '', psComp: '',
 
 const WEEKS_PER_MONTH = 4.33; 
 
+let MONTHS = JSON.parse(localStorage.getItem('ce_months')) || [...DEFAULT_MONTHS];
 let PROJ_APPS_BASE = JSON.parse(localStorage.getItem('ce_apps_base')) || [...DEFAULT_APPS];
 let ENROLL_TGTS = JSON.parse(localStorage.getItem('ce_enroll_tgts')) || [...DEFAULT_TGTS];
 let WORKING_DAYS = JSON.parse(localStorage.getItem('ce_working_days')) || [...DEFAULT_WD];
@@ -351,6 +358,7 @@ function savePreset() {
     savedMonth: parseInt(selMonth, 10), 
     inputs: {},
     arrays: {
+      MONTHS: [...MONTHS],
       PROJ_APPS_BASE: [...PROJ_APPS_BASE],
       ENROLL_TGTS: [...ENROLL_TGTS],
       WORKING_DAYS: [...WORKING_DAYS],
@@ -387,6 +395,7 @@ function loadPreset() {
   }
   
   if (data.arrays) {
+    MONTHS = data.arrays.MONTHS ? [...data.arrays.MONTHS] : [...DEFAULT_MONTHS];
     PROJ_APPS_BASE = [...data.arrays.PROJ_APPS_BASE];
     ENROLL_TGTS = [...data.arrays.ENROLL_TGTS];
     WORKING_DAYS = [...data.arrays.WORKING_DAYS];
@@ -394,6 +403,7 @@ function loadPreset() {
     PFA_PTO_DAYS = [...data.arrays.PFA_PTO_DAYS];
     if(data.arrays.WK_TGTS) WK_TGTS = JSON.parse(JSON.stringify(data.arrays.WK_TGTS));
     
+    localStorage.setItem('ce_months', JSON.stringify(MONTHS));
     localStorage.setItem('ce_apps_base', JSON.stringify(PROJ_APPS_BASE));
     localStorage.setItem('ce_enroll_tgts', JSON.stringify(ENROLL_TGTS));
     localStorage.setItem('ce_working_days', JSON.stringify(WORKING_DAYS));
@@ -402,8 +412,9 @@ function loadPreset() {
     localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
   }
   
-  const targetMonth = data.savedMonth !== undefined ? parseInt(data.savedMonth, 10) : selMonth;
-  setMonth(targetMonth); 
+  renderMonthBar();
+  const targetMonth = data.savedMonth !== undefined ? parseInt(data.savedMonth, 10) : 0;
+  setMonth(targetMonth < MONTHS.length ? targetMonth : 0); 
 }
 
 function deletePreset() {
@@ -416,44 +427,97 @@ function deletePreset() {
   }
 }
 
-// ── MODAL LOGIC ──
+// ── DYNAMIC UI RENDERING ──
+function renderMonthBar() {
+  const container = document.getElementById('month-bar-container');
+  container.innerHTML = '<span class="month-bar-label">Month:</span>';
+  MONTHS.forEach((m, i) => {
+    container.innerHTML += `<button class="month-btn" onclick="setMonth(${i})">${m}</button>`;
+  });
+}
+
+function syncModalToMemory() {
+  for (let i = 0; i < MONTHS.length; i++) {
+    const moEl = document.getElementById(`mod-mo-${i}`);
+    if (moEl) {
+      MONTHS[i] = moEl.value || `Month ${i+1}`;
+      PROJ_APPS_BASE[i] = parseInt(document.getElementById(`mod-apps-${i}`).value) || 0;
+      ENROLL_TGTS[i] = parseInt(document.getElementById(`mod-tgt-${i}`).value) || 0;
+      WORKING_DAYS[i] = parseFloat(document.getElementById(`mod-wd-${i}`).value) || 0;
+      PTO_DAYS[i] = parseFloat(document.getElementById(`mod-pto-${i}`).value) || 0;
+      PFA_PTO_DAYS[i] = parseFloat(document.getElementById(`mod-pfapto-${i}`).value) || 0;
+    }
+  }
+}
+
 function openSettingsModal() {
   const tbody = document.getElementById('modal-table-body');
   let html = '';
   for (let i = 0; i < MONTHS.length; i++) {
-    html += `<tr><td><strong>${MONTHS[i]}</strong></td>
+    html += `<tr>
+      <td><input type="text" id="mod-mo-${i}" value="${MONTHS[i]}"></td>
       <td><input type="number" id="mod-apps-${i}" value="${PROJ_APPS_BASE[i]}"></td>
       <td><input type="number" id="mod-tgt-${i}" value="${ENROLL_TGTS[i]}"></td>
       <td><input type="number" id="mod-wd-${i}" value="${WORKING_DAYS[i]}"></td>
       <td><input type="number" id="mod-pto-${i}" value="${PTO_DAYS[i]}"></td>
-      <td><input type="number" id="mod-pfapto-${i}" value="${PFA_PTO_DAYS[i]}"></td></tr>`;
+      <td><input type="number" id="mod-pfapto-${i}" value="${PFA_PTO_DAYS[i]}"></td>
+      <td><button class="danger-btn" style="padding: 4px 8px; font-size: 10px;" onclick="removeMonthRow(${i})">X</button></td>
+    </tr>`;
   }
   tbody.innerHTML = html;
   document.getElementById('ptoModal').classList.add('open');
 }
+
 function closeSettingsModal() { document.getElementById('ptoModal').classList.remove('open'); }
+
+function addMonthRow() {
+  syncModalToMemory();
+  MONTHS.push("New");
+  PROJ_APPS_BASE.push(1000);
+  ENROLL_TGTS.push(500);
+  WORKING_DAYS.push(20);
+  PTO_DAYS.push(0);
+  PFA_PTO_DAYS.push(0);
+  WK_TGTS.push({psSched: '', psComp: '', evSched: '', evComp: '', enr: ''});
+  openSettingsModal();
+}
+
+function removeMonthRow(i) {
+  if (MONTHS.length <= 1) return alert("You must have at least one month active.");
+  syncModalToMemory();
+  MONTHS.splice(i, 1);
+  PROJ_APPS_BASE.splice(i, 1);
+  ENROLL_TGTS.splice(i, 1);
+  WORKING_DAYS.splice(i, 1);
+  PTO_DAYS.splice(i, 1);
+  PFA_PTO_DAYS.splice(i, 1);
+  WK_TGTS.splice(i, 1);
+  if (selMonth >= MONTHS.length) selMonth = MONTHS.length - 1;
+  openSettingsModal();
+}
+
 function saveSettingsModal() {
-  for (let i = 0; i < MONTHS.length; i++) {
-    PROJ_APPS_BASE[i] = parseInt(document.getElementById(`mod-apps-${i}`).value) || 0;
-    ENROLL_TGTS[i] = parseInt(document.getElementById(`mod-tgt-${i}`).value) || 0;
-    WORKING_DAYS[i] = parseFloat(document.getElementById(`mod-wd-${i}`).value) || 0;
-    PTO_DAYS[i] = parseFloat(document.getElementById(`mod-pto-${i}`).value) || 0;
-    PFA_PTO_DAYS[i] = parseFloat(document.getElementById(`mod-pfapto-${i}`).value) || 0;
-  }
+  syncModalToMemory();
+  localStorage.setItem('ce_months', JSON.stringify(MONTHS));
   localStorage.setItem('ce_apps_base', JSON.stringify(PROJ_APPS_BASE));
   localStorage.setItem('ce_enroll_tgts', JSON.stringify(ENROLL_TGTS));
   localStorage.setItem('ce_working_days', JSON.stringify(WORKING_DAYS));
   localStorage.setItem('ce_pto_days', JSON.stringify(PTO_DAYS));
   localStorage.setItem('ce_pfa_pto_days', JSON.stringify(PFA_PTO_DAYS));
+  localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
+  renderMonthBar();
   setMonth(selMonth);
   closeSettingsModal();
 }
+
 function restoreDefaults() { 
-  if(confirm("Restore defaults?")) { 
-    PROJ_APPS_BASE=[...DEFAULT_APPS]; ENROLL_TGTS=[...DEFAULT_TGTS]; WORKING_DAYS=[...DEFAULT_WD]; PTO_DAYS=[...DEFAULT_CE_PTO]; PFA_PTO_DAYS=[...DEFAULT_PFA_PTO];
+  if(confirm("Restore factory defaults? This will overwrite your custom months and data.")) { 
+    MONTHS=[...DEFAULT_MONTHS]; PROJ_APPS_BASE=[...DEFAULT_APPS]; ENROLL_TGTS=[...DEFAULT_TGTS]; WORKING_DAYS=[...DEFAULT_WD]; PTO_DAYS=[...DEFAULT_CE_PTO]; PFA_PTO_DAYS=[...DEFAULT_PFA_PTO];
+    WK_TGTS = Array.from({length: 8}, () => ({psSched: '', psComp: '', evSched: '', evComp: '', enr: ''}));
     saveSettingsModal(); 
   } 
 }
+
 function syncToArrays() {
   PROJ_APPS_BASE[selMonth] = rv('apps-base-input');
   ENROLL_TGTS[selMonth] = rv('enroll-target');
@@ -746,6 +810,7 @@ function updateChart() {
   const curPfaStaff = rv('pfaHeadcount');
   
   if (chart) { 
+    chart.data.labels = MONTHS;
     chart.data.datasets[0].data = reqCeData; 
     chart.data.datasets[1].data = reqCeStrictData;
     chart.data.datasets[2].data = MONTHS.map(() => curCeStaff);
@@ -798,6 +863,7 @@ function updateChart() {
 document.querySelectorAll('input:not(.wk-input)').forEach(i => i.addEventListener('input', sync));
 window.onload = () => { 
   updatePresetDropdown();
+  renderMonthBar();
   setMonth(0); 
 };
 </script>

@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CE + PFA Capacity Arbitrage v28</title>
+<title>CE + PFA Capacity Arbitrage v29</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -63,18 +63,21 @@
   .tb-val { font-size: 20px; font-weight: 700; }
   .tb-sep { width:1px; height:36px; background:#2d3548; }
 
+  /* COMPACT HORIZONTAL TABLE CSS */
   .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 14px; }
-  .capacity-table { width:100%; border-collapse:collapse; font-size:12px; min-width: 450px; }
-  .capacity-table th { text-align:left; color:#64748b; font-size:10px; text-transform:uppercase; letter-spacing:.06em; padding:6px 8px; border-bottom:1px solid #2d3548; }
-  .capacity-table td { padding:8px; border-bottom:1px solid #1a2030; color:#cbd5e1; }
+  .capacity-table { width:100%; border-collapse:collapse; font-size:12px; min-width: 500px; }
+  .capacity-table th { text-align:center; color:#64748b; font-size:10px; text-transform:uppercase; letter-spacing:.06em; padding:6px 4px; border-bottom:1px solid #2d3548; }
+  .capacity-table th:first-child { text-align: left; width: 90px; }
+  .capacity-table td { padding:8px 4px; border-bottom:1px solid #1a2030; color:#cbd5e1; text-align: center; vertical-align: middle; }
+  .capacity-table td:first-child { text-align: left; }
   .capacity-table tr:last-child td { border-bottom:none; }
-  .capacity-table .em { color:#f1f5f9; font-weight:600; text-align: right; }
+  .capacity-table .em { color:#f1f5f9; font-weight:600; }
   .capacity-table .g  { color:#22c55e; }
   
-  .wk-input { width: 56px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 4px; color: #a5b4fc; font-weight: 600; padding: 4px; text-align: right; font-size: 12px; transition: border-color 0.2s; }
+  .wk-input { width: 50px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 4px; color: #a5b4fc; font-weight: 600; padding: 4px; text-align: center; font-size: 12px; transition: border-color 0.2s; margin: 0 auto; display: block; }
   .wk-input:focus { border-color: #6366f1; outline: none; }
 
-  .weekly-status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .weekly-status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 3px; }
   .ws-green { background-color: #22c55e; box-shadow: 0 0 4px rgba(34,197,94,0.6); }
   .ws-red { background-color: #ef4444; box-shadow: 0 0 4px rgba(239,68,68,0.6); }
 
@@ -122,7 +125,7 @@
 </head>
 <body>
 
-<h1>CE + PFA Capacity Arbitrage v28</h1>
+<h1>CE + PFA Capacity Arbitrage v29</h1>
 <p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment (Integrated Bypass Engine)</p>
 
 <div class="month-bar">
@@ -232,37 +235,38 @@
       <div class="table-responsive">
         <table class="capacity-table">
           <thead>
-            <tr><th>Metric</th><th style="text-align:right; width:80px;">Target (Wk)</th><th>System Demand</th><th style="text-align:right;">Max Capacity</th></tr>
+            <tr>
+              <th>Metric</th>
+              <th>PS Sched</th>
+              <th>PS Comp</th>
+              <th>Eval Sched</th>
+              <th>Eval Comp</th>
+              <th>Enrolled</th>
+            </tr>
           </thead>
           <tbody>
             <tr>
-              <td><strong>PS Scheduled</strong></td>
-              <td style="text-align:right;"><input type="number" class="wk-input" id="wt-psSched" placeholder="0"></td>
+              <td><strong>Wk Target</strong></td>
+              <td><input type="number" class="wk-input" id="wt-psSched" placeholder="0"></td>
+              <td><input type="number" class="wk-input" id="wt-psComp" placeholder="0"></td>
+              <td><input type="number" class="wk-input" id="wt-evSched" placeholder="0"></td>
+              <td><input type="number" class="wk-input" id="wt-evComp" placeholder="0"></td>
+              <td><input type="number" class="wk-input" id="wt-enr" placeholder="0"></td>
+            </tr>
+            <tr>
+              <td><strong>System Demand</strong></td>
               <td id="wd-psSched"></td>
-              <td class="em g" id="wc-psSched"></td>
-            </tr>
-            <tr>
-              <td><strong>PS Completed</strong></td>
-              <td style="text-align:right;"><input type="number" class="wk-input" id="wt-psComp" placeholder="0"></td>
               <td id="wd-psComp"></td>
-              <td class="em g" id="wc-psComp"></td>
-            </tr>
-            <tr>
-              <td><strong>Evals Scheduled</strong></td>
-              <td style="text-align:right;"><input type="number" class="wk-input" id="wt-evSched" placeholder="0"></td>
               <td id="wd-evSched"></td>
-              <td class="em g" id="wc-evSched"></td>
-            </tr>
-            <tr>
-              <td><strong>Evals Completed</strong></td>
-              <td style="text-align:right;"><input type="number" class="wk-input" id="wt-evComp" placeholder="0"></td>
               <td id="wd-evComp"></td>
-              <td class="em g" id="wc-evComp"></td>
+              <td id="wd-enr"></td>
             </tr>
             <tr>
-              <td><strong>Enrolled</strong></td>
-              <td style="text-align:right;"><input type="number" class="wk-input" id="wt-enr" placeholder="0"></td>
-              <td id="wd-enr"></td>
+              <td><strong>Max Capacity</strong></td>
+              <td class="em g" id="wc-psSched"></td>
+              <td class="em g" id="wc-psComp"></td>
+              <td class="em g" id="wc-evSched"></td>
+              <td class="em g" id="wc-evComp"></td>
               <td class="em g" id="wc-enr"></td>
             </tr>
           </tbody>
@@ -552,6 +556,7 @@ function calculateMetrics(mIdx) {
     const pfaPsCap = pfaHead * pfaDailyQuota * pfaNetWd * pfaShrink;
     const systemPsCap = cePsCap + pfaPsCap;
 
+    // Strict PS Math for PFA Requirement
     const reqPFAs = (pfaDailyQuota * pfaNetWd * pfaShrink) > 0 ? pfaPsDemand / (pfaDailyQuota * pfaNetWd * pfaShrink) : 0;
 
     const evalComp = rv('evalComp')/100;
@@ -587,7 +592,7 @@ function updateWkRow(id, dem, cap) {
   const isDemMet = demGap >= 0;
   const badge = `<span class="weekly-status ${isDemMet ? 'ws-green' : 'ws-red'}"></span>`;
   
-  document.getElementById('wd-' + id).innerHTML = `${badge}${fmt(dem)} <span style="color:#64748b; font-size:10px;">(${isDemMet?'+':''}${fmt(demGap)})</span>`;
+  document.getElementById('wd-' + id).innerHTML = `<div style="display:flex; justify-content:center; align-items:center;">${badge}${fmt(dem)}</div><div style="font-size:10px; color:#64748b; margin-top:2px;">(${isDemMet?'+':''}${fmt(demGap)})</div>`;
   document.getElementById('wc-' + id).textContent = fmt(cap);
 }
 

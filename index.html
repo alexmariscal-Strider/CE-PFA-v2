@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CE + PFA Capacity Arbitrage v29</title>
+<title>CE + PFA Capacity Arbitrage v30</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -23,6 +23,9 @@
 
   .danger-btn { background: transparent; border: 1px solid #ef4444; color: #ef4444; font-weight: 600; cursor: pointer; padding: 8px 12px; border-radius: 6px; transition: all 0.15s; }
   .danger-btn:hover { background: #ef4444; color: #ffffff; }
+  
+  .archive-btn { background: transparent; border: 1px solid #f59e0b; color: #f59e0b; font-weight: 600; cursor: pointer; padding: 4px 8px; font-size: 10px; border-radius: 4px; transition: all 0.15s; }
+  .archive-btn:hover { background: #f59e0b; color: #ffffff; }
 
   .grid { display: grid; grid-template-columns: 380px 1fr; gap: 16px; }
   .panel { background: #1e2330; border-radius: 10px; padding: 16px; border: 1px solid #2d3548; }
@@ -112,6 +115,12 @@
   .modal-table input[type=text] { text-align: left; width: 75px; }
   .modal-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #2d3548; padding-top: 12px; }
 
+  .archived-section { margin-top: 20px; border-top: 1px dashed #3d4a63; padding-top: 16px; }
+  .archived-section h3 { font-size: 12px; color: #94a3b8; text-transform: uppercase; margin-bottom: 10px; }
+  .archived-row { display: flex; align-items: center; justify-content: space-between; background: #161a24; padding: 8px 12px; border-radius: 4px; margin-bottom: 4px; border: 1px solid #2d3548; }
+  .archived-info { font-size: 12px; color: #cbd5e1; }
+  .archived-actions button { margin-left: 6px; }
+
   .chart-container { height: 220px; margin-top: 10px; margin-bottom: 16px; width: 100%; position: relative; }
 
   @media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } }
@@ -127,7 +136,7 @@
 </head>
 <body>
 
-<h1>CE + PFA Capacity Arbitrage v29</h1>
+<h1>CE + PFA Capacity Arbitrage v30</h1>
 <p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment (Integrated Bypass Engine)</p>
 
 <div class="month-bar" id="month-bar-container">
@@ -195,7 +204,7 @@
     <div class="input-row"><label>Known PTO Days (CEs)</label><input type="number" id="ptoDays" onchange="syncToArrays()"></div>
     <div class="input-row"><label>Known PTO Days (PFAs)</label><input type="number" id="pfaPtoDays" onchange="syncToArrays()"></div>
     
-    <button class="action-btn" style="width: 100%; justify-content: center; margin: 10px 0; font-size: 11px;" onclick="openSettingsModal()">📅 Manage Month Forecasts & Calendar</button>
+    <button class="action-btn" style="width: 100%; justify-content: center; margin: 10px 0; font-size: 11px;" onclick="openSettingsModal()">📅 Manage Month Forecasts & Archive</button>
 
     <div class="input-row"><label>CE Shrinkage (%)</label><input type="range" id="shrinkage" min="0" max="25" value="2"><span class="val-badge" id="shrinkage-v">2%</span></div>
     <div class="input-row"><label>PFA Shrinkage (%)</label><input type="range" id="pfaShrinkage" min="0" max="25" value="5"><span class="val-badge" id="pfaShrinkage-v">5%</span></div>
@@ -281,25 +290,33 @@
 <div class="modal-overlay" id="ptoModal">
   <div class="modal-box">
     <div class="modal-header">
-      <h2>📅 Dynamic Month Manager</h2>
+      <h2>📅 Dynamic Month Manager & Archive</h2>
       <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
     </div>
     <div class="modal-body">
-      <table class="modal-table">
-        <thead>
-          <tr>
-            <th>Month Label</th>
-            <th>Base Apps</th>
-            <th>Target Enroll</th>
-            <th>Work Days</th>
-            <th>CE PTO</th>
-            <th>PFA PTO</th>
-            <th style="width:30px;"></th>
-          </tr>
-        </thead>
-        <tbody id="modal-table-body"></tbody>
-      </table>
+      <div class="table-responsive">
+        <table class="modal-table">
+          <thead>
+            <tr>
+              <th>Active Month</th>
+              <th>Base Apps</th>
+              <th>Target Enroll</th>
+              <th>Work Days</th>
+              <th>CE PTO</th>
+              <th>PFA PTO</th>
+              <th style="width:50px;"></th>
+            </tr>
+          </thead>
+          <tbody id="modal-table-body"></tbody>
+        </table>
+      </div>
+
+      <div class="archived-section" id="archive-container" style="display:none;">
+        <h3>Archived Months (Max 12)</h3>
+        <div id="archive-list"></div>
+      </div>
     </div>
+    
     <div class="modal-footer">
       <div>
         <button class="action-btn" onclick="addMonthRow()" style="background:#1e3a5f; border-color:#3b82f6;">+ Add Month</button>
@@ -329,6 +346,8 @@ let WORKING_DAYS = JSON.parse(localStorage.getItem('ce_working_days')) || [...DE
 let PTO_DAYS = JSON.parse(localStorage.getItem('ce_pto_days')) || [...DEFAULT_CE_PTO];
 let PFA_PTO_DAYS = JSON.parse(localStorage.getItem('ce_pfa_pto_days')) || [...DEFAULT_PFA_PTO];
 let WK_TGTS = JSON.parse(localStorage.getItem('ce_wk_tgts')) || DEFAULT_WK_TGTS;
+
+let ARCHIVE_DATA = JSON.parse(localStorage.getItem('ce_archive_data')) || [];
 
 // Preset Logic Variables
 const PRESET_INPUTS = ['appGrowth', 'psSchedRate', 'stdCEs', 'leadCEs', 'pfaHeadcount', 'stdCePsQuota', 'stdCeEvalQuota', 'leadCePsQuota', 'leadCeEvalQuota', 'pfaDailyQuota', 'psAht', 'evalAht', 'shrinkage', 'pfaShrinkage', 'pfaPct', 'psComp', 'siRate', 'schedRate', 'evalComp', 'enrollRate'];
@@ -450,7 +469,8 @@ function syncModalToMemory() {
   }
 }
 
-function openSettingsModal() {
+function renderModalTables() {
+  // Active Table
   const tbody = document.getElementById('modal-table-body');
   let html = '';
   for (let i = 0; i < MONTHS.length; i++) {
@@ -461,10 +481,35 @@ function openSettingsModal() {
       <td><input type="number" id="mod-wd-${i}" value="${WORKING_DAYS[i]}"></td>
       <td><input type="number" id="mod-pto-${i}" value="${PTO_DAYS[i]}"></td>
       <td><input type="number" id="mod-pfapto-${i}" value="${PFA_PTO_DAYS[i]}"></td>
-      <td><button class="danger-btn" style="padding: 4px 8px; font-size: 10px;" onclick="removeMonthRow(${i})">X</button></td>
+      <td><button class="archive-btn" title="Archive this month" onclick="archiveMonthRow(${i})">Archive</button></td>
     </tr>`;
   }
   tbody.innerHTML = html;
+
+  // Archive Table
+  const archContainer = document.getElementById('archive-container');
+  const archList = document.getElementById('archive-list');
+  if (ARCHIVE_DATA.length > 0) {
+    archContainer.style.display = 'block';
+    let archHtml = '';
+    ARCHIVE_DATA.forEach((item, i) => {
+      archHtml += `
+        <div class="archived-row">
+          <div class="archived-info"><strong>${item.label}</strong> · Apps: ${item.apps} · Target: ${item.tgt}</div>
+          <div class="archived-actions">
+            <button class="load-btn" onclick="restoreArchiveRow(${i})">Restore</button>
+            <button class="danger-btn" style="padding: 4px 8px; font-size: 11px;" onclick="deleteArchiveRow(${i})">Delete</button>
+          </div>
+        </div>`;
+    });
+    archList.innerHTML = archHtml;
+  } else {
+    archContainer.style.display = 'none';
+  }
+}
+
+function openSettingsModal() {
+  renderModalTables();
   document.getElementById('ptoModal').classList.add('open');
 }
 
@@ -479,12 +524,21 @@ function addMonthRow() {
   PTO_DAYS.push(0);
   PFA_PTO_DAYS.push(0);
   WK_TGTS.push({psSched: '', psComp: '', evSched: '', evComp: '', enr: ''});
-  openSettingsModal();
+  renderModalTables();
 }
 
-function removeMonthRow(i) {
-  if (MONTHS.length <= 1) return alert("You must have at least one month active.");
+function archiveMonthRow(i) {
+  if (MONTHS.length <= 1) return alert("You must have at least one active month on the dashboard.");
   syncModalToMemory();
+  
+  const archivedItem = {
+    label: MONTHS[i], apps: PROJ_APPS_BASE[i], tgt: ENROLL_TGTS[i],
+    wd: WORKING_DAYS[i], cePto: PTO_DAYS[i], pfaPto: PFA_PTO_DAYS[i], wkTgts: WK_TGTS[i]
+  };
+  
+  ARCHIVE_DATA.unshift(archivedItem);
+  if (ARCHIVE_DATA.length > 12) ARCHIVE_DATA.pop(); // Enforce 12 month limit
+  
   MONTHS.splice(i, 1);
   PROJ_APPS_BASE.splice(i, 1);
   ENROLL_TGTS.splice(i, 1);
@@ -492,12 +546,37 @@ function removeMonthRow(i) {
   PTO_DAYS.splice(i, 1);
   PFA_PTO_DAYS.splice(i, 1);
   WK_TGTS.splice(i, 1);
+  
   if (selMonth >= MONTHS.length) selMonth = MONTHS.length - 1;
-  openSettingsModal();
+  saveDataToLocal();
+  renderModalTables();
 }
 
-function saveSettingsModal() {
+function restoreArchiveRow(i) {
   syncModalToMemory();
+  const item = ARCHIVE_DATA.splice(i, 1)[0];
+  
+  MONTHS.push(item.label);
+  PROJ_APPS_BASE.push(item.apps);
+  ENROLL_TGTS.push(item.tgt);
+  WORKING_DAYS.push(item.wd);
+  PTO_DAYS.push(item.cePto);
+  PFA_PTO_DAYS.push(item.pfaPto);
+  WK_TGTS.push(item.wkTgts || {psSched: '', psComp: '', evSched: '', evComp: '', enr: ''});
+  
+  saveDataToLocal();
+  renderModalTables();
+}
+
+function deleteArchiveRow(i) {
+  if(confirm("Permanently delete this archived month?")) {
+    ARCHIVE_DATA.splice(i, 1);
+    saveDataToLocal();
+    renderModalTables();
+  }
+}
+
+function saveDataToLocal() {
   localStorage.setItem('ce_months', JSON.stringify(MONTHS));
   localStorage.setItem('ce_apps_base', JSON.stringify(PROJ_APPS_BASE));
   localStorage.setItem('ce_enroll_tgts', JSON.stringify(ENROLL_TGTS));
@@ -505,16 +584,24 @@ function saveSettingsModal() {
   localStorage.setItem('ce_pto_days', JSON.stringify(PTO_DAYS));
   localStorage.setItem('ce_pfa_pto_days', JSON.stringify(PFA_PTO_DAYS));
   localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
+  localStorage.setItem('ce_archive_data', JSON.stringify(ARCHIVE_DATA));
+}
+
+function saveSettingsModal() {
+  syncModalToMemory();
+  saveDataToLocal();
   renderMonthBar();
   setMonth(selMonth);
   closeSettingsModal();
 }
 
 function restoreDefaults() { 
-  if(confirm("Restore factory defaults? This will overwrite your custom months and data.")) { 
+  if(confirm("Restore factory defaults? This will clear your custom months and archive vault.")) { 
     MONTHS=[...DEFAULT_MONTHS]; PROJ_APPS_BASE=[...DEFAULT_APPS]; ENROLL_TGTS=[...DEFAULT_TGTS]; WORKING_DAYS=[...DEFAULT_WD]; PTO_DAYS=[...DEFAULT_CE_PTO]; PFA_PTO_DAYS=[...DEFAULT_PFA_PTO];
     WK_TGTS = Array.from({length: 8}, () => ({psSched: '', psComp: '', evSched: '', evComp: '', enr: ''}));
-    saveSettingsModal(); 
+    ARCHIVE_DATA = [];
+    saveDataToLocal();
+    renderModalTables();
   } 
 }
 
@@ -524,12 +611,7 @@ function syncToArrays() {
   WORKING_DAYS[selMonth] = rv('workingDays');
   PTO_DAYS[selMonth] = rv('ptoDays');
   PFA_PTO_DAYS[selMonth] = rv('pfaPtoDays');
-  
-  localStorage.setItem('ce_apps_base', JSON.stringify(PROJ_APPS_BASE));
-  localStorage.setItem('ce_enroll_tgts', JSON.stringify(ENROLL_TGTS));
-  localStorage.setItem('ce_working_days', JSON.stringify(WORKING_DAYS));
-  localStorage.setItem('ce_pto_days', JSON.stringify(PTO_DAYS));
-  localStorage.setItem('ce_pfa_pto_days', JSON.stringify(PFA_PTO_DAYS));
+  saveDataToLocal();
   sync();
 }
 
@@ -785,6 +867,15 @@ function sync() {
     narrative += `The PFA team is adequately staffed to absorb this volume without bottlenecking.</p>`;
   }
 
+  narrative += `<p><strong>3. CE Clinical Staffing:</strong> `;
+  if (ceDeficit > 0.5) {
+    narrative += `Even with PFA diversion, we remain short <strong>${ceDeficit.toFixed(1)} CEs</strong> to handle the downstream demand of ${fmt(m.ceEvalDemand)} evaluations. We must increase CE headcount or face severe scheduling delays.</p>`;
+  } else if (ceDeficit < -0.5) {
+    narrative += `CEs have a healthy capacity surplus and are well-staffed to clear the evaluation queue.</p>`;
+  } else {
+    narrative += `CE headcount is perfectly balanced with incoming clinical demand.</p>`;
+  }
+
   document.getElementById('narrative-output').innerHTML = narrative;
 
   // Funnel
@@ -836,20 +927,7 @@ function updateChart() {
       responsive: true, maintainAspectRatio: false, 
       interaction: { mode: 'index', intersect: false },
       plugins: { 
-        legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8' } },
-        tooltip: {
-          backgroundColor: 'rgba(15, 17, 23, 0.9)',
-          titleColor: '#f1f5f9',
-          bodyColor: '#cbd5e1',
-          borderColor: '#3d4a63',
-          borderWidth: 1,
-          padding: 10,
-          callbacks: {
-            label: function(context) {
-              return context.dataset.label + ': ' + context.parsed.y.toFixed(1);
-            }
-          }
-        }
+        legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8' } }
       },
       scales: { 
         y: { beginAtZero: false, grid: { color: '#2d3548' }, ticks: { color: '#94a3b8' } },

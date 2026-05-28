@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CE + PFA Capacity Arbitrage v26</title>
+<title>CE + PFA Capacity Arbitrage v27</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -26,7 +26,7 @@
 
   .grid { display: grid; grid-template-columns: 380px 1fr; gap: 16px; }
   .panel { background: #1e2330; border-radius: 10px; padding: 16px; border: 1px solid #2d3548; }
-  .panel h2 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 12px; }
+  .panel h2 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 6px; }
 
   .section-label { font-size: 11px; font-weight: 600; color: #7c8db0; text-transform: uppercase; letter-spacing: 0.06em; margin: 14px 0 8px; border-top: 1px solid #2d3548; padding-top: 10px; }
   .section-label:first-child { margin-top: 0; border-top: none; padding-top: 0; }
@@ -34,12 +34,15 @@
   .input-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; flex-wrap: wrap; }
   .input-row label { color: #cbd5e1; font-size: 12px; flex: 1; line-height: 1.35; min-width: 120px; }
   .input-row input[type=range]  { width: 84px; accent-color: #6366f1; }
-  .input-row input[type=number] { width: 60px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 5px; color: #f1f5f9; padding: 4px; text-align: right; }
+  .input-row input[type=number] { width: 60px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 5px; color: #f1f5f9; padding: 4px; text-align: right; transition: border-color 0.2s; }
+  .input-row input[type=number]:focus { border-color: #6366f1; outline: none; }
   .val-badge { min-width: 40px; text-align: right; font-size: 12px; color: #a5b4fc; font-weight: 600; }
   .ro-val    { min-width: 60px; text-align: right; font-size: 12px; font-weight: 600; color: #f1f5f9; background: #0f1117; border: 1px solid #2d3548; border-radius: 5px; padding: 4px 7px; }
   
   .quota-row { display: flex; gap: 4px; align-items: center; justify-content: flex-end; }
   .quota-row input { width: 38px; }
+  .load-badge { font-size: 10px; color: #64748b; font-weight: 600; margin-right: 6px; width: 40px; text-align: right; transition: color 0.2s; }
+  .load-badge.err { color: #ef4444; }
 
   .results-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
   .stat-card { background: #252c3f; border-radius: 8px; padding: 12px; border: 1px solid #2d3548; display: flex; flex-direction: column; justify-content: space-between; }
@@ -60,9 +63,7 @@
   .tb-val { font-size: 20px; font-weight: 700; }
   .tb-sep { width:1px; height:36px; background:#2d3548; }
 
-  /* RESPONSIVE TABLE CONTAINER */
   .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 14px; }
-  
   .capacity-table { width:100%; border-collapse:collapse; font-size:12px; min-width: 450px; }
   .capacity-table th { text-align:left; color:#64748b; font-size:10px; text-transform:uppercase; letter-spacing:.06em; padding:6px 8px; border-bottom:1px solid #2d3548; }
   .capacity-table td { padding:8px; border-bottom:1px solid #1a2030; color:#cbd5e1; }
@@ -108,28 +109,20 @@
 
   .chart-container { height: 220px; margin-top: 10px; margin-bottom: 16px; width: 100%; position: relative; }
 
-  /* RESPONSIVE DESIGN ENGINE */
-  @media (max-width: 1024px) {
-    .grid { grid-template-columns: 1fr; }
-  }
-  
+  @media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } }
   @media (max-width: 768px) {
     .results-grid { grid-template-columns: repeat(2, 1fr); }
     .funnel-grid { grid-template-columns: 1fr; }
     .target-banner { flex-direction: column; align-items: flex-start; gap: 12px; }
     .tb-item { width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center; }
     .tb-sep { width: 100%; height: 1px; }
-    .input-row { flex-wrap: wrap; }
   }
-
-  @media (max-width: 480px) {
-    .results-grid { grid-template-columns: 1fr; }
-  }
+  @media (max-width: 480px) { .results-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 
-<h1>CE + PFA Capacity Arbitrage v26</h1>
+<h1>CE + PFA Capacity Arbitrage v27</h1>
 <p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment (Integrated Bypass Engine)</p>
 
 <div class="month-bar">
@@ -172,9 +165,27 @@
     <div class="input-row"><label>PFA Headcount</label><input type="number" id="pfaHeadcount" value="5"></div>
     
     <div class="section-label">Clinical Scheduling Quotas</div>
-    <div class="input-row"><label>Std CE Daily (PS/Ev)</label><div class="quota-row"><input type="number" id="stdCePsQuota" value="4"><input type="number" id="stdCeEvalQuota" value="3"></div></div>
-    <div class="input-row"><label>Lead CE Daily (PS/Ev)</label><div class="quota-row"><input type="number" id="leadCePsQuota" value="3"><input type="number" id="leadCeEvalQuota" value="3"></div></div>
-    <div class="input-row"><label>PFA Daily PS Quota</label><div class="quota-row"><input type="number" id="pfaDailyQuota" value="10"></div></div>
+    <div class="input-row">
+      <label>Std CE Daily (PS/Ev)</label>
+      <div class="quota-row">
+        <span class="load-badge" id="std-load-badge">0.0h</span>
+        <input type="number" id="stdCePsQuota" value="4"><input type="number" id="stdCeEvalQuota" value="3">
+      </div>
+    </div>
+    <div class="input-row">
+      <label>Lead CE Daily (PS/Ev)</label>
+      <div class="quota-row">
+        <span class="load-badge" id="lead-load-badge">0.0h</span>
+        <input type="number" id="leadCePsQuota" value="3"><input type="number" id="leadCeEvalQuota" value="3">
+      </div>
+    </div>
+    <div class="input-row">
+      <label>PFA Daily PS Quota</label>
+      <div class="quota-row">
+        <span class="load-badge" id="pfa-load-badge">0.0h</span>
+        <input type="number" id="pfaDailyQuota" value="10">
+      </div>
+    </div>
 
     <div class="section-label" style="color:#22c55e;">PFA Capacity Arbitrage</div>
     <div class="input-row"><label>PSs Diverted to PFA %</label><input type="range" id="pfaPct" min="0" max="100" value="37"><span class="val-badge" id="pfaPct-v">37%</span></div>
@@ -204,6 +215,10 @@
   <div class="right-col">
     <div class="panel">
       <h2>Executive Staffing & Utilization</h2>
+      <p style="font-size:10px; color:#64748b; margin-bottom:12px; line-height:1.4;">
+        <strong>Math:</strong> Required CE = Total Clinical Mins ÷ CE Prod. Mins. Required PFA = PS Demand ÷ PFA Quota Capacity.<br>
+        <strong>Note:</strong> Required CE math assumes staff flexibly share their clinical time. Rigid daily quotas may still cause bottlenecks.
+      </p>
       <div class="results-grid" id="metrics-output"></div>
     </div>
 
@@ -211,7 +226,7 @@
       <h2>Enrollment Target Assurance</h2>
       <div class="target-banner" id="target-banner"></div>
       
-      <h2>Headcount Forecast (May - Dec) <span style="font-size:10px;color:#64748b;font-weight:400;margin-left:4px;">· Required vs Actual tracking for the remainder of the year.</span></h2>
+      <h2>Headcount Forecast (May - Dec)</h2>
       <div class="chart-container"><canvas id="headcountChart"></canvas></div>
 
       <h2>Weekly Run Rate vs. Manual Targets <span style="font-size:10px;color:#64748b;font-weight:400;">· Enter custom targets to track pacing</span></h2>
@@ -330,7 +345,7 @@ function savePreset() {
   if (!name) return;
   
   const presetData = {
-    savedMonth: parseInt(selMonth, 10), // Capture the active month securely
+    savedMonth: parseInt(selMonth, 10),
     inputs: {},
     arrays: {
       PROJ_APPS_BASE: [...PROJ_APPS_BASE],
@@ -454,7 +469,6 @@ function syncToArrays() {
 // ── APP LOGIC ──
 function setMonth(i) { 
   selMonth = i; 
-  // Strictly target only the month bar tabs so other buttons don't throw off the index
   document.querySelectorAll('.month-bar .month-btn').forEach((b, idx) => b.classList.toggle('active', idx === i)); 
   
   document.getElementById('apps-base-input').value = PROJ_APPS_BASE[i]; 
@@ -570,12 +584,32 @@ function updateWkRow(id, dem, cap) {
 function sync() {
   const m = calculateMetrics(selMonth);
 
-  // Read-only Updates
+  // Read-only Updates & Dynamic Clinical Load Calculation
+  const psAht = rv('psAht');
+  const evAht = rv('evalAht');
+  
   ['appGrowth', 'psAht', 'evalAht', 'pfaPct', 'psSchedRate', 'shrinkage', 'pfaShrinkage', 'psComp', 'siRate', 'schedRate', 'evalComp', 'enrollRate'].forEach(id => {
     const el = document.getElementById(id + '-v');
     if (el) el.textContent = (id.includes('Aht') ? rv(id) + 'm' : (id==='appGrowth' ? '+' : '') + rv(id) + '%');
   });
   document.getElementById('gross-ps-ro').textContent = fmt(m.apps * (rv('psSchedRate')/100));
+
+  // REAL-TIME QUOTA VALIDATION
+  const stdHrs = ((rv('stdCePsQuota') * psAht) + (rv('stdCeEvalQuota') * evAht)) / 60;
+  const leadHrs = ((rv('leadCePsQuota') * psAht) + (rv('leadCeEvalQuota') * evAht)) / 60;
+  const pfaHrs = (rv('pfaDailyQuota') * psAht) / 60;
+
+  const stdBadge = document.getElementById('std-load-badge');
+  stdBadge.textContent = stdHrs.toFixed(1) + 'h';
+  stdBadge.className = stdHrs > 8 ? 'load-badge err' : 'load-badge';
+
+  const leadBadge = document.getElementById('lead-load-badge');
+  leadBadge.textContent = leadHrs.toFixed(1) + 'h';
+  leadBadge.className = leadHrs > 8 ? 'load-badge err' : 'load-badge';
+
+  const pfaBadge = document.getElementById('pfa-load-badge');
+  pfaBadge.textContent = pfaHrs.toFixed(1) + 'h';
+  pfaBadge.className = pfaHrs > 8 ? 'load-badge err' : 'load-badge';
 
   // Executive Metrics Headroom Math
   const sysPsUtil = m.systemPsCap > 0 ? (m.systemPsDemand / m.systemPsCap) * 100 : 0;
@@ -610,19 +644,12 @@ function sync() {
     <div class="stat-card hl">
       <div class="stat-label">Required CE Headcount</div>
       <div class="stat-value">${m.reqCEs.toFixed(1)}</div>
-      <div class="stat-sub">
-        Current: ${curCEs} · ${ceStaffStr}<br>
-        <span style="font-size:9px; color:#64748b; margin-top:4px; display:block;">Math: ((PS Demand × PS AHT) + (Eval Demand × Eval AHT)) ÷ CE Prod. Minutes</span>
-        <span style="font-size:9px; color:#64748b; margin-top:2px; display:block;">Note: Assumes staff flexibly share their time. Rigid daily quotas may still cause bottlenecks.</span>
-      </div>
+      <div class="stat-sub">Current: ${curCEs} · ${ceStaffStr}</div>
     </div>
     <div class="stat-card hl" style="border-color:#10b981; background:#0f2a1a;">
       <div class="stat-label" style="color:#86efac;">Required PFA Headcount</div>
       <div class="stat-value">${m.reqPFAs.toFixed(1)}</div>
-      <div class="stat-sub" style="color:#86efac;">
-        Current: ${curPFAs} · Cap: ${fmt(m.pfaPsCap)} PSs · ${pfaStaffStr}<br>
-        <span style="font-size:9px; color:#4ade80; margin-top:4px; display:block; opacity:0.8;">Math: PFA Demand ÷ (Daily Quota × Net Work Days × Shrinkage)</span>
-      </div>
+      <div class="stat-sub" style="color:#86efac;">Current: ${curPFAs} · Cap: ${fmt(m.pfaPsCap)} PSs · ${pfaStaffStr}</div>
     </div>
   `;
 
@@ -660,7 +687,7 @@ function sync() {
   }
   
   if (ceDeficit <= 0.5 && m.systemPsCap < m.systemPsDemand) {
-    narrative += `<p><strong>⚠️ Quota Bottleneck (The WFM Paradox):</strong> We have enough total CE headcount to clear the required clinical minutes, but we are projecting a Phone Screen shortfall. This means our <strong>Daily Quotas</strong> are artificially restricting our staff. We don't necessarily need more CEs; we need to shift the CE daily quota to allow more Phone Screens.</p>`;
+    narrative += `<p><strong>⚠️ Quota Bottleneck (The Suitcase Paradox):</strong> We have enough total CE headcount to clear the required clinical minutes, but we are projecting a Phone Screen shortfall. This means our <strong>Daily Quotas</strong> are artificially restricting our staff. We don't necessarily need more CEs; we need to shift the CE daily quota to allow more Phone Screens to be completed within their available clinical time.</p>`;
   }
 
   narrative += `<p><strong>2. PFA Arbitrage Strategy:</strong> By diverting ${rv('pfaPct')}% of volume to PFAs, we are shielding CEs from <strong>${fmt(m.pfaPsDemand)} phone screens</strong>. `;

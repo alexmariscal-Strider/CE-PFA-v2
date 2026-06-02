@@ -2,8 +2,10 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CE + PFA Capacity Arbitrage v30</title>
+<title>CE + PFA Capacity Arbitrage v31 (Cloud-Synced)</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -66,7 +68,6 @@
   .tb-val { font-size: 20px; font-weight: 700; }
   .tb-sep { width:1px; height:36px; background:#2d3548; }
 
-  /* COMPACT HORIZONTAL TABLE CSS */
   .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 14px; }
   .capacity-table { width:100%; border-collapse:collapse; font-size:12px; min-width: 500px; }
   .capacity-table th { text-align:center; color:#64748b; font-size:10px; text-transform:uppercase; letter-spacing:.06em; padding:6px 4px; border-bottom:1px solid #2d3548; }
@@ -136,7 +137,7 @@
 </head>
 <body>
 
-<h1>CE + PFA Capacity Arbitrage v30</h1>
+<h1>CE + PFA Capacity Arbitrage v31</h1>
 <p class="subtitle">Full System Funnel: Phone Screen & Eval Capacity Alignment (Integrated Bypass Engine)</p>
 
 <div class="month-bar" id="month-bar-container">
@@ -328,6 +329,77 @@
 </div>
 
 <script>
+// ── FIREBASE CONFIGURATION & INIT ──
+const firebaseConfig = {
+  apiKey: "AIzaSyBU1tPMTjYtRSbmlttGfLKebl7gnwLzgBw",
+  authDomain: "ce-wfm-suite.firebaseapp.com",
+  databaseURL: "https://ce-wfm-suite-default-rtdb.firebaseio.com",
+  projectId: "ce-wfm-suite",
+  storageBucket: "ce-wfm-suite.firebasestorage.app",
+  messagingSenderId: "590100182080",
+  appId: "1:590100182080:web:b52ae564a6aa4377709ba5"
+};
+
+let firebaseInitialized = false;
+const DB_PATH = '/pfa_arbitrage_forecast';
+
+function initFirebaseSync() {
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  firebaseInitialized = true;
+  const db = firebase.database();
+  
+  // OPTIMISTIC SYNC: Check cloud for the absolute source of truth
+  db.ref(DB_PATH).once('value').then(snap => {
+    if(snap.exists()) {
+      const data = snap.val();
+      
+      // Fallbacks required because Firebase silently drops empty arrays
+      MONTHS = data.MONTHS || [...DEFAULT_MONTHS];
+      PROJ_APPS_BASE = data.PROJ_APPS_BASE || [...DEFAULT_APPS];
+      ENROLL_TGTS = data.ENROLL_TGTS || [...DEFAULT_TGTS];
+      WORKING_DAYS = data.WORKING_DAYS || [...DEFAULT_WD];
+      PTO_DAYS = data.PTO_DAYS || [...DEFAULT_CE_PTO];
+      PFA_PTO_DAYS = data.PFA_PTO_DAYS || [...DEFAULT_PFA_PTO];
+      WK_TGTS = data.WK_TGTS || Array.from({length: 8}, () => ({psSched: '', psComp: '', evSched: '', evComp: '', enr: ''}));
+      ARCHIVE_DATA = data.ARCHIVE_DATA || [];
+      PRESETS = data.PRESETS || {};
+
+      // Instantly overwrite browser localStorage so the next refresh is flawless
+      localStorage.setItem('ce_months', JSON.stringify(MONTHS));
+      localStorage.setItem('ce_apps_base', JSON.stringify(PROJ_APPS_BASE));
+      localStorage.setItem('ce_enroll_tgts', JSON.stringify(ENROLL_TGTS));
+      localStorage.setItem('ce_working_days', JSON.stringify(WORKING_DAYS));
+      localStorage.setItem('ce_pto_days', JSON.stringify(PTO_DAYS));
+      localStorage.setItem('ce_pfa_pto_days', JSON.stringify(PFA_PTO_DAYS));
+      localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
+      localStorage.setItem('ce_archive_data', JSON.stringify(ARCHIVE_DATA));
+      localStorage.setItem('ce_presets', JSON.stringify(PRESETS));
+
+      // Soft refresh UI
+      updatePresetDropdown();
+      renderMonthBar();
+      if (selMonth >= MONTHS.length) selMonth = Math.max(0, MONTHS.length - 1);
+      setMonth(selMonth);
+      
+      console.log("🔥 Firebase sync complete: UI updated with live cloud data.");
+    } else {
+      // Cloud is completely empty. Seed it with our browser's local memory.
+      console.log("🔥 Firebase empty: Seeding cloud with local storage data...");
+      pushToFirebase();
+    }
+  }).catch(err => console.error("Firebase sync error:", err));
+}
+
+function pushToFirebase() {
+  if (!firebaseInitialized) return;
+  const payload = {
+    MONTHS, PROJ_APPS_BASE, ENROLL_TGTS, WORKING_DAYS, PTO_DAYS, PFA_PTO_DAYS, WK_TGTS, ARCHIVE_DATA, PRESETS
+  };
+  firebase.database().ref(DB_PATH).set(payload);
+}
+
 // ── DEFAULTS & DYNAMIC STORAGE ──
 const DEFAULT_MONTHS = ['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const DEFAULT_APPS = [1367, 1036, 1039, 1108, 1340, 1425, 1367, 1322];
@@ -339,6 +411,7 @@ const DEFAULT_WK_TGTS = Array.from({length: 8}, () => ({psSched: '', psComp: '',
 
 const WEEKS_PER_MONTH = 4.33; 
 
+// Initial optimistic load from Local Storage
 let MONTHS = JSON.parse(localStorage.getItem('ce_months')) || [...DEFAULT_MONTHS];
 let PROJ_APPS_BASE = JSON.parse(localStorage.getItem('ce_apps_base')) || [...DEFAULT_APPS];
 let ENROLL_TGTS = JSON.parse(localStorage.getItem('ce_enroll_tgts')) || [...DEFAULT_TGTS];
@@ -346,11 +419,7 @@ let WORKING_DAYS = JSON.parse(localStorage.getItem('ce_working_days')) || [...DE
 let PTO_DAYS = JSON.parse(localStorage.getItem('ce_pto_days')) || [...DEFAULT_CE_PTO];
 let PFA_PTO_DAYS = JSON.parse(localStorage.getItem('ce_pfa_pto_days')) || [...DEFAULT_PFA_PTO];
 let WK_TGTS = JSON.parse(localStorage.getItem('ce_wk_tgts')) || DEFAULT_WK_TGTS;
-
 let ARCHIVE_DATA = JSON.parse(localStorage.getItem('ce_archive_data')) || [];
-
-// Preset Logic Variables
-const PRESET_INPUTS = ['appGrowth', 'psSchedRate', 'stdCEs', 'leadCEs', 'pfaHeadcount', 'stdCePsQuota', 'stdCeEvalQuota', 'leadCePsQuota', 'leadCeEvalQuota', 'pfaDailyQuota', 'psAht', 'evalAht', 'shrinkage', 'pfaShrinkage', 'pfaPct', 'psComp', 'siRate', 'schedRate', 'evalComp', 'enrollRate'];
 let PRESETS = JSON.parse(localStorage.getItem('ce_presets')) || {};
 
 let selMonth = 0; let chart = null;
@@ -387,7 +456,8 @@ function savePreset() {
     }
   };
   
-  PRESET_INPUTS.forEach(id => {
+  // Scrape all slider inputs dynamically
+  ['appGrowth', 'psSchedRate', 'stdCEs', 'leadCEs', 'pfaHeadcount', 'stdCePsQuota', 'stdCeEvalQuota', 'leadCePsQuota', 'leadCeEvalQuota', 'pfaDailyQuota', 'psAht', 'evalAht', 'shrinkage', 'pfaShrinkage', 'pfaPct', 'psComp', 'siRate', 'schedRate', 'evalComp', 'enrollRate'].forEach(id => {
     const el = document.getElementById(id);
     if(el) presetData.inputs[id] = el.value;
   });
@@ -396,6 +466,7 @@ function savePreset() {
   localStorage.setItem('ce_presets', JSON.stringify(PRESETS));
   updatePresetDropdown();
   document.getElementById('preset-select').value = name;
+  pushToFirebase(); // Sync to cloud
 }
 
 function loadPreset() {
@@ -405,11 +476,9 @@ function loadPreset() {
   if(!data) return;
   
   if (data.inputs) {
-    PRESET_INPUTS.forEach(id => {
+    Object.keys(data.inputs).forEach(id => {
       const el = document.getElementById(id);
-      if (el && data.inputs[id] !== undefined) {
-        el.value = data.inputs[id];
-      }
+      if (el) el.value = data.inputs[id];
     });
   }
   
@@ -421,14 +490,7 @@ function loadPreset() {
     PTO_DAYS = [...data.arrays.PTO_DAYS];
     PFA_PTO_DAYS = [...data.arrays.PFA_PTO_DAYS];
     if(data.arrays.WK_TGTS) WK_TGTS = JSON.parse(JSON.stringify(data.arrays.WK_TGTS));
-    
-    localStorage.setItem('ce_months', JSON.stringify(MONTHS));
-    localStorage.setItem('ce_apps_base', JSON.stringify(PROJ_APPS_BASE));
-    localStorage.setItem('ce_enroll_tgts', JSON.stringify(ENROLL_TGTS));
-    localStorage.setItem('ce_working_days', JSON.stringify(WORKING_DAYS));
-    localStorage.setItem('ce_pto_days', JSON.stringify(PTO_DAYS));
-    localStorage.setItem('ce_pfa_pto_days', JSON.stringify(PFA_PTO_DAYS));
-    localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
+    saveDataToLocal(); // Handles local + firebase sync
   }
   
   renderMonthBar();
@@ -443,6 +505,7 @@ function deletePreset() {
     delete PRESETS[sel.value];
     localStorage.setItem('ce_presets', JSON.stringify(PRESETS));
     updatePresetDropdown();
+    pushToFirebase(); // Sync to cloud
   }
 }
 
@@ -470,7 +533,6 @@ function syncModalToMemory() {
 }
 
 function renderModalTables() {
-  // Active Table
   const tbody = document.getElementById('modal-table-body');
   let html = '';
   for (let i = 0; i < MONTHS.length; i++) {
@@ -486,7 +548,6 @@ function renderModalTables() {
   }
   tbody.innerHTML = html;
 
-  // Archive Table
   const archContainer = document.getElementById('archive-container');
   const archList = document.getElementById('archive-list');
   if (ARCHIVE_DATA.length > 0) {
@@ -537,7 +598,7 @@ function archiveMonthRow(i) {
   };
   
   ARCHIVE_DATA.unshift(archivedItem);
-  if (ARCHIVE_DATA.length > 12) ARCHIVE_DATA.pop(); // Enforce 12 month limit
+  if (ARCHIVE_DATA.length > 12) ARCHIVE_DATA.pop(); 
   
   MONTHS.splice(i, 1);
   PROJ_APPS_BASE.splice(i, 1);
@@ -585,6 +646,7 @@ function saveDataToLocal() {
   localStorage.setItem('ce_pfa_pto_days', JSON.stringify(PFA_PTO_DAYS));
   localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
   localStorage.setItem('ce_archive_data', JSON.stringify(ARCHIVE_DATA));
+  pushToFirebase(); // Sync everything cleanly to the cloud
 }
 
 function saveSettingsModal() {
@@ -639,6 +701,7 @@ document.querySelectorAll('.wk-input').forEach(inp => {
   inp.addEventListener('input', (e) => {
     WK_TGTS[selMonth][e.target.id.replace('wt-', '')] = e.target.value;
     localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
+    pushToFirebase(); // Sync minor table tweaks to cloud
     sync(); 
   });
 });
@@ -660,7 +723,6 @@ function calculateMetrics(mIdx) {
     const pfaApps = apps * (rv('pfaPct')/100);
     const stdApps = apps - pfaApps;
 
-    // Unified Demand Calcs
     const cePsDemand = stdApps * psSchedRate;
     const pfaPsDemand = pfaApps * psSchedRate; 
     const systemPsDemand = cePsDemand + pfaPsDemand;
@@ -669,7 +731,6 @@ function calculateMetrics(mIdx) {
     const pfaBypassConv = 0.55; 
     const ceEvalDemand = (cePsDemand * psToEvalConv) + (pfaApps * pfaBypassConv);
 
-    // CE Capacity Calcs
     const stdCEs = rv('stdCEs');
     const leadCEs = rv('leadCEs');
     const totalCEs = stdCEs + leadCEs || 1;
@@ -678,13 +739,11 @@ function calculateMetrics(mIdx) {
     const cePsCap = ((stdCEs * rv('stdCePsQuota')) + (leadCEs * rv('leadCePsQuota'))) * netCeWd * ceShrink;
     const ceEvCap = ((stdCEs * rv('stdCeEvalQuota')) + (leadCEs * rv('leadCeEvalQuota'))) * netCeWd * ceShrink;
     
-    // 1. IDEAL REQUIREMENT (Time-Based)
     const ceMinReq = (cePsDemand * rv('psAht')) + (ceEvalDemand * rv('evalAht'));
     const ceDailyProdMins = (rv('stdCePsQuota') * rv('psAht')) + (rv('stdCeEvalQuota') * rv('evalAht'));
     const monthlyMinsPerCE = ceDailyProdMins * netCeWd * ceShrink;
     const reqCEs = monthlyMinsPerCE > 0 ? ceMinReq / monthlyMinsPerCE : 0;
 
-    // 2. STRICT REQUIREMENT (Quota-Based)
     const avgPsQuota = ((stdCEs * rv('stdCePsQuota')) + (leadCEs * rv('leadCePsQuota'))) / totalCEs;
     const avgEvQuota = ((stdCEs * rv('stdCeEvalQuota')) + (leadCEs * rv('leadCeEvalQuota'))) / totalCEs;
     const avgMonthlyPsCap = avgPsQuota * netCeWd * ceShrink;
@@ -694,7 +753,6 @@ function calculateMetrics(mIdx) {
     const strictReqForEv = avgMonthlyEvCap > 0 ? ceEvalDemand / avgMonthlyEvCap : 0;
     const reqCEsStrict = Math.max(strictReqForPs, strictReqForEv);
 
-    // PFA Capacity Calcs
     const pfaHead = rv('pfaHeadcount');
     const pfaNetWd = Math.max(0, wd - (pfaHead > 0 ? pfaPto / pfaHead : 0)); 
     const pfaDailyQuota = rv('pfaDailyQuota') || 1;
@@ -702,13 +760,11 @@ function calculateMetrics(mIdx) {
     const pfaPsCap = pfaHead * pfaDailyQuota * pfaNetWd * pfaShrink;
     const systemPsCap = cePsCap + pfaPsCap;
 
-    // Strict PS Math for PFA Requirement
     const reqPFAs = (pfaDailyQuota * pfaNetWd * pfaShrink) > 0 ? pfaPsDemand / (pfaDailyQuota * pfaNetWd * pfaShrink) : 0;
 
     const evalComp = rv('evalComp')/100;
     const enrollRate = rv('enrollRate')/100;
     
-    // END-TO-END CONSTRAINED YIELD MATH
     const ceEvalsFed = Math.min(cePsDemand, cePsCap) * psToEvalConv;
     const pfaProcessedRatio = pfaPsDemand > 0 ? Math.min(1, pfaPsCap / pfaPsDemand) : 1;
     const pfaEvalsFed = (pfaApps * pfaProcessedRatio) * pfaBypassConv;
@@ -745,7 +801,6 @@ function updateWkRow(id, dem, cap) {
 function sync() {
   const m = calculateMetrics(selMonth);
 
-  // Read-only Updates & Dynamic Clinical Load Calculation
   const psAht = rv('psAht');
   const evAht = rv('evalAht');
   
@@ -755,7 +810,6 @@ function sync() {
   });
   document.getElementById('gross-ps-ro').textContent = fmt(m.apps * (rv('psSchedRate')/100));
 
-  // REAL-TIME QUOTA VALIDATION
   const stdHrs = ((rv('stdCePsQuota') * psAht) + (rv('stdCeEvalQuota') * evAht)) / 60;
   const leadHrs = ((rv('leadCePsQuota') * psAht) + (rv('leadCeEvalQuota') * evAht)) / 60;
   const pfaHrs = (rv('pfaDailyQuota') * psAht) / 60;
@@ -772,7 +826,6 @@ function sync() {
   pfaBadge.textContent = pfaHrs.toFixed(1) + 'h';
   pfaBadge.className = pfaHrs > 8 ? 'load-badge err' : 'load-badge';
 
-  // Executive Metrics Headroom Math
   const sysPsUtil = m.systemPsCap > 0 ? (m.systemPsDemand / m.systemPsCap) * 100 : 0;
   const psHeadroom = m.systemPsCap - m.systemPsDemand;
   const psHeadStr = psHeadroom >= 0 ? `<span style="color:#22c55e;">+${fmt(psHeadroom)} headroom</span>` : `<span style="color:#ef4444;">${fmt(Math.abs(psHeadroom))} shortfall</span>`;
@@ -822,10 +875,8 @@ function sync() {
     </div>
   `;
 
-  // Target Ratio for proper run-rate scaling
   const yieldRatio = m.actualEnrolled > 0 ? (m.tgt / m.actualEnrolled) : 0;
 
-  // Target Banner
   document.getElementById('target-banner').innerHTML = `
     <div class="tb-item"><div class="tb-label">Enroll Target</div><div class="tb-val">${fmt(m.tgt)}</div></div>
     <div class="tb-sep"></div>
@@ -836,14 +887,12 @@ function sync() {
     <div class="tb-item"><div class="tb-label">Variance</div><div class="tb-val" style="color:${m.maxYield>=m.tgt?'#22c55e':'#ef4444'}">${m.maxYield>=m.tgt?'+':''}${fmt(m.maxYield-m.tgt)}</div></div>
   `;
 
-  // Weekly Table Manual Sync
   updateWkRow('psSched', m.systemPsDemand / WEEKS_PER_MONTH, m.systemPsCap / WEEKS_PER_MONTH);
   updateWkRow('psComp', m.actualPsComp / WEEKS_PER_MONTH, (m.systemPsCap * (rv('psComp')/100)) / WEEKS_PER_MONTH);
   updateWkRow('evSched', m.ceEvalDemand / WEEKS_PER_MONTH, m.ceEvCap / WEEKS_PER_MONTH);
   updateWkRow('evComp', m.actualEvComp / WEEKS_PER_MONTH, (m.ceEvCap * (rv('evalComp')/100)) / WEEKS_PER_MONTH);
   updateWkRow('enr', m.actualEnrolled / WEEKS_PER_MONTH, m.maxYield / WEEKS_PER_MONTH);
 
-  // Dynamic Narrative Generation
   let narrative = `<h3>Monthly Executive Insight</h3>`;
 
   narrative += `<p><strong>1. Target & Bottleneck Analysis:</strong> Our end-to-end capacity yield is <strong>${fmt(m.maxYield)} enrollments</strong> against a target of ${fmt(m.tgt)}. `;
@@ -878,7 +927,6 @@ function sync() {
 
   document.getElementById('narrative-output').innerHTML = narrative;
 
-  // Funnel
   const maxBar = Math.max(m.systemPsDemand, m.systemPsCap) * 1.1;
   document.getElementById('demand-bars').innerHTML = `
     <div class="funnel-row"><div class="funnel-lbl">Total PS Demand</div><div class="funnel-bar-wrap"><div class="funnel-bar bar-std" style="width:${(m.systemPsDemand/maxBar)*100}%"><span>${fmt(m.systemPsDemand)}</span></div></div></div>
@@ -927,7 +975,20 @@ function updateChart() {
       responsive: true, maintainAspectRatio: false, 
       interaction: { mode: 'index', intersect: false },
       plugins: { 
-        legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8' } }
+        legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8' } },
+        tooltip: {
+          backgroundColor: 'rgba(15, 17, 23, 0.9)',
+          titleColor: '#f1f5f9',
+          bodyColor: '#cbd5e1',
+          borderColor: '#3d4a63',
+          borderWidth: 1,
+          padding: 10,
+          callbacks: {
+            label: function(context) {
+              return context.dataset.label + ': ' + context.parsed.y.toFixed(1);
+            }
+          }
+        }
       },
       scales: { 
         y: { beginAtZero: false, grid: { color: '#2d3548' }, ticks: { color: '#94a3b8' } },
@@ -937,12 +998,11 @@ function updateChart() {
   });
 }
 
-// Initial binding
-document.querySelectorAll('input:not(.wk-input)').forEach(i => i.addEventListener('input', sync));
 window.onload = () => { 
   updatePresetDropdown();
   renderMonthBar();
   setMonth(0); 
+  initFirebaseSync(); 
 };
 </script>
 </body>

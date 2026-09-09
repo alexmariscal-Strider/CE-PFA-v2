@@ -410,6 +410,7 @@ function initFirebaseSync() {
         PFA_PTO_DAYS = data.PFA_PTO_DAYS || [...DEFAULT_PFA_PTO];
         ARCHIVE_DATA = data.ARCHIVE_DATA || [];
         PRESETS = data.PRESETS || {};
+        GLOBAL_INPUTS = data.GLOBAL_INPUTS || JSON.parse(localStorage.getItem('ce_global_inputs')) || null;
 
         const rawWkTgts = data.WK_TGTS || [];
         WK_TGTS = Array.isArray(rawWkTgts) ? rawWkTgts.map(w => w ? w : {psSched: '', psComp: '', evSched: '', evComp: '', enr: ''}) : Array.from({length: 8}, () => ({psSched: '', psComp: '', evSched: '', evComp: '', enr: ''}));
@@ -427,6 +428,14 @@ function initFirebaseSync() {
         localStorage.setItem('ce_wk_tgts', JSON.stringify(WK_TGTS));
         localStorage.setItem('ce_archive_data', JSON.stringify(ARCHIVE_DATA));
         localStorage.setItem('ce_presets', JSON.stringify(PRESETS));
+        
+        if(GLOBAL_INPUTS) {
+           localStorage.setItem('ce_global_inputs', JSON.stringify(GLOBAL_INPUTS));
+           Object.keys(GLOBAL_INPUTS).forEach(id => {
+              const el = document.getElementById(id);
+              if(el) el.value = GLOBAL_INPUTS[id];
+           });
+        }
 
         updatePresetDropdown();
         renderMonthBar();
@@ -444,7 +453,7 @@ function initFirebaseSync() {
 function pushToFirebase() {
   try {
     if (!firebaseInitialized) return;
-    const payload = { MONTHS, PROJ_APPS_BASE, ENROLL_TGTS, WORKING_DAYS, PTO_DAYS, PFA_PTO_DAYS, WK_TGTS, ARCHIVE_DATA, PRESETS };
+    const payload = { MONTHS, PROJ_APPS_BASE, ENROLL_TGTS, WORKING_DAYS, PTO_DAYS, PFA_PTO_DAYS, WK_TGTS, ARCHIVE_DATA, PRESETS, GLOBAL_INPUTS };
     firebase.database().ref(DB_PATH).set(payload).catch(err => {
        console.warn("Firebase Write Failed (Your data was still saved locally):", err);
     });
@@ -461,6 +470,7 @@ const DEFAULT_WD = [18, 21, 21, 21, 21, 21, 18, 22];
 const DEFAULT_CE_PTO = [20, 0, 0, 0, 0, 0, 0, 0];
 const DEFAULT_PFA_PTO = [0, 0, 0, 0, 0, 0, 0, 0];
 const DEFAULT_WK_TGTS = Array.from({length: 8}, () => ({psSched: '', psComp: '', evSched: '', evComp: '', enr: ''}));
+const GLOBAL_INPUT_IDS = ['appGrowth', 'psSchedRate', 'stdCEs', 'leadCEs', 'pfaHeadcount', 'stdCePsQuota', 'stdCeEvalQuota', 'leadCePsQuota', 'leadCeEvalQuota', 'pfaDailyQuota', 'pfaPct', 'psAht', 'evalAht', 'shrinkage', 'pfaShrinkage', 'psComp', 'siRate', 'schedRate', 'evalComp', 'enrollRate'];
 
 const WEEKS_PER_MONTH = 4.33; 
 
@@ -473,6 +483,7 @@ let PFA_PTO_DAYS = JSON.parse(localStorage.getItem('ce_pfa_pto_days')) || [...DE
 let WK_TGTS = JSON.parse(localStorage.getItem('ce_wk_tgts')) || DEFAULT_WK_TGTS;
 let ARCHIVE_DATA = JSON.parse(localStorage.getItem('ce_archive_data')) || [];
 let PRESETS = JSON.parse(localStorage.getItem('ce_presets')) || {};
+let GLOBAL_INPUTS = JSON.parse(localStorage.getItem('ce_global_inputs')) || null;
 
 if(WK_TGTS.length < MONTHS.length) {
     while(WK_TGTS.length < MONTHS.length) { WK_TGTS.push({psSched: '', psComp: '', evSched: '', evComp: '', enr: ''}); }
@@ -512,7 +523,7 @@ function savePreset() {
     }
   };
   
-  ['appGrowth', 'psSchedRate', 'stdCEs', 'leadCEs', 'pfaHeadcount', 'stdCePsQuota', 'stdCeEvalQuota', 'leadCePsQuota', 'leadCeEvalQuota', 'pfaDailyQuota', 'psAht', 'evalAht', 'shrinkage', 'pfaShrinkage', 'pfaPct', 'psComp', 'siRate', 'schedRate', 'evalComp', 'enrollRate'].forEach(id => {
+  GLOBAL_INPUT_IDS.forEach(id => {
     const el = document.getElementById(id);
     if(el) presetData.inputs[id] = el.value;
   });
@@ -531,10 +542,13 @@ function loadPreset() {
   if(!data) return;
   
   if (data.inputs) {
+    if(!GLOBAL_INPUTS) GLOBAL_INPUTS = {};
     Object.keys(data.inputs).forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = data.inputs[id];
+      GLOBAL_INPUTS[id] = data.inputs[id];
     });
+    localStorage.setItem('ce_global_inputs', JSON.stringify(GLOBAL_INPUTS));
   }
   
   if (data.arrays) {
@@ -1106,7 +1120,18 @@ function updateChart() {
 }
 
 // ── BINDINGS ──
-document.querySelectorAll('input:not(.wk-input)').forEach(i => i.addEventListener('input', sync));
+document.querySelectorAll('input:not(.wk-input)').forEach(i => {
+  i.addEventListener('input', (e) => {
+    // Autosave Global Inputs (Sliders, Headcount, Quotas, etc)
+    if (GLOBAL_INPUT_IDS.includes(e.target.id)) {
+       if(!GLOBAL_INPUTS) GLOBAL_INPUTS = {};
+       GLOBAL_INPUTS[e.target.id] = e.target.value;
+       localStorage.setItem('ce_global_inputs', JSON.stringify(GLOBAL_INPUTS));
+       pushToFirebase();
+    }
+    sync();
+  });
+});
 
 document.querySelectorAll('.wk-input').forEach(inp => {
   inp.addEventListener('input', (e) => {
@@ -1119,6 +1144,13 @@ document.querySelectorAll('.wk-input').forEach(inp => {
 });
 
 window.onload = () => { 
+  // Load local fallbacks before Firebase overrides
+  if (GLOBAL_INPUTS) {
+     Object.keys(GLOBAL_INPUTS).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = GLOBAL_INPUTS[id];
+     });
+  }
   updatePresetDropdown();
   renderMonthBar();
   setMonth(0); 

@@ -927,7 +927,17 @@ function sync() {
 
     const curCEs = rv('stdCEs') + rv('leadCEs');
     const ceDeficit = m.reqCEs - curCEs;
-    const ceStaffStr = ceDeficit > 0.5 ? `<span style="color:#ef4444;">+${ceDeficit.toFixed(1)} Ideal Deficit</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`;
+    const strictDeficit = m.reqCEsStrict - curCEs;
+    
+    const formatDiff = (val, colorDeficit) => {
+      if (Math.abs(val) < 0.1) return `<span style="color:#22c55e;">Balanced</span>`;
+      if (val > 0) return `<span style="color:${colorDeficit};">+${val.toFixed(1)}</span>`;
+      return `<span style="color:#22c55e;">${val.toFixed(1)}</span>`;
+    };
+    
+    const idealStr = formatDiff(ceDeficit, '#f59e0b') + ' Ideal';
+    const strictStr = formatDiff(strictDeficit, '#ef4444') + ' Strict';
+    const ceStaffStr = `${idealStr} <span style="color:#64748b; margin: 0 4px;">|</span> ${strictStr}`;
 
     const curPFAs = rv('pfaHeadcount');
     const pfaDeficit = m.reqPFAs - curPFAs;
